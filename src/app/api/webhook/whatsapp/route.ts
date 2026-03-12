@@ -5,6 +5,7 @@ import { processBusinessCard } from "@/lib/businessCard/businessCardOCR";
 import { handleConfirmationReply } from "@/lib/businessCard/confirmationHandler";
 import { buildCardPreviewMessage } from "@/lib/businessCard/whatsappPreview";
 import { sendWhatsAppMessage } from "@/lib/whatsappSender";
+import { generateAutoResponse } from "@/lib/autoResponder";
 
 /* -----------------------------------
  * TYPES
@@ -138,6 +139,14 @@ export async function POST(req: Request) {
       )) as ConfirmationDecision;
 
       if (!decision) {
+        console.log("🤖 Pass to AI Auto Responder...");
+        await generateAutoResponse(
+            payload.from,
+            payload.to,
+            finalText,
+            payload.messageId,
+            mediaUrl || undefined
+        );
         return NextResponse.json({ success: true });
       }
 
