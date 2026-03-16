@@ -28,52 +28,50 @@ export async function POST(req: NextRequest) {
                 {
                     role: "system",
                     content: `
-You are a senior Conversational AI system prompt designer.
+You are a senior Conversational AI prompt engineer.
 
-Your task is to generate a SYSTEM PROMPT for a WhatsApp chatbot.
+Your task is to generate a SYSTEM PROMPT for a WhatsApp chatbot representing the brand 11za.
 
-STRICT BEHAVIOR RULES:
+11za is a SaaS platform built on the Official WhatsApp Business API that helps businesses automate conversations, manage chats, send broadcast campaigns, and improve customer engagement through WhatsApp.
 
-1. Language Mirroring (Very Important)
-- The chatbot MUST reply in the SAME language and style as the user.
-- Hindi → Hindi
-- English → English
-- Hinglish → Hinglish
-- Mixed / broken language → reply naturally in the same way
-- Do NOT mention language detection.
+The generated system prompt must include the following guardrails:
 
-2. Human-like Conversation
-- Replies must sound natural, warm, and human.
-- Professional but friendly tone.
-- Light emojis allowed (😊 👍), never overuse.
-- WhatsApp-style short and clear messages.
-- No robotic or scripted responses.
+1. Language Mirroring
+The chatbot must reply in the same language as the user (Hindi, English, Hinglish).
 
-3. Knowledge Boundary Rule
-- Answer only from available information.
-- NEVER mention words like:
-  "document", "documents", "data source", "dataset", "knowledge base", "training data".
+2. Human Conversation
+Responses must be friendly, natural, and WhatsApp-style.
+Keep replies short.
 
-4. Fallback Rule (Critical)
-If an exact answer is NOT available:
-- Politely say the information is not available right now.
-- Offer help with something else.
-- Be human and respectful.
-- Do NOT explain why data is missing.
+3. Greeting Handling
+If a user sends "hi", "hello", or "hey", greet them and ask how you can help with 11za.
 
-Fallback examples:
-- Hinglish: "Is topic pe abhi exact info available nahi hai 😊 Aap kuch aur pooch sakte ho."
-- Hindi: "Is vishay par abhi jaankari uplabdh nahi hai 😊 Aap koi aur sawaal pooch sakte hain."
-- English: "I don’t have the right information on this yet 😊 Feel free to ask something else."
+4. Brand Representation
+Explain that 11za helps businesses automate communication using WhatsApp.
 
-5. Personalization
-- If user name is known, use it naturally.
-- Example: "Hi Rahul 😊", "Thanks for reaching out, Ayesha!"
+5. Feature Awareness
+Mention that 11za supports:
+- WhatsApp Business API
+- chat automation
+- broadcast messaging
+- chat management
+- integrations
+- analytics
+
+6. Knowledge Boundary
+Never mention internal sources like:
+documents, datasets, knowledge base, training data.
+
+7. Response Length
+Responses should be short (2–4 lines).
+
+8. Fallback Rule
+If the information is not available, politely say so and offer help with another question.
 
 Generate ONLY the system prompt text.
-No explanation, no formatting.
+Do not add explanation.
 Keep it under 250 words.
-                    `.trim(),
+          `.trim(),
                 },
                 {
                     role: "user",
@@ -81,12 +79,13 @@ Keep it under 250 words.
 Create a system prompt for a WhatsApp chatbot with this intent:
 
 "${intent}"
-                    `.trim(),
+          `.trim(),
                 },
             ],
         });
 
-        const systemPrompt = completion.choices[0]?.message?.content?.trim();
+        const systemPrompt =
+            completion.choices?.[0]?.message?.content?.trim();
 
         if (!systemPrompt) {
             throw new Error("Failed to generate system prompt");
@@ -95,13 +94,15 @@ Create a system prompt for a WhatsApp chatbot with this intent:
         console.log("Generated system prompt:", systemPrompt);
 
         // Check if phone number already exists
-        const { data: existingMappings } = await supabase
+        const { data: existingMappings, error: selectError } = await supabase
             .from("phone_document_mapping")
             .select("*")
             .eq("phone_number", phone_number);
 
+        if (selectError) throw selectError;
+
         if (existingMappings && existingMappings.length > 0) {
-            const { error } = await supabase
+            const { error: updateError } = await supabase
                 .from("phone_document_mapping")
                 .update({
                     intent,
@@ -109,9 +110,9 @@ Create a system prompt for a WhatsApp chatbot with this intent:
                 })
                 .eq("phone_number", phone_number);
 
-            if (error) throw error;
+            if (updateError) throw updateError;
         } else {
-            const { error } = await supabase
+            const { error: insertError } = await supabase
                 .from("phone_document_mapping")
                 .insert({
                     phone_number,
@@ -120,7 +121,7 @@ Create a system prompt for a WhatsApp chatbot with this intent:
                     file_id: null,
                 });
 
-            if (error) throw error;
+            if (insertError) throw insertError;
         }
 
         return NextResponse.json({
@@ -128,7 +129,6 @@ Create a system prompt for a WhatsApp chatbot with this intent:
             system_prompt: systemPrompt,
             intent,
         });
-
     } catch (error) {
         console.error("System prompt generation error:", error);
 
