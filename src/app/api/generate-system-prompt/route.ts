@@ -84,8 +84,7 @@ Create a system prompt for a WhatsApp chatbot with this intent:
             ],
         });
 
-        const systemPrompt =
-            completion.choices?.[0]?.message?.content?.trim();
+        const systemPrompt = completion.choices?.[0]?.message?.content?.trim();
 
         if (!systemPrompt) {
             throw new Error("Failed to generate system prompt");
