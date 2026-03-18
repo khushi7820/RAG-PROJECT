@@ -92,41 +92,64 @@ export async function POST(req: Request) {
                     extractedText = respAny.blocks.map((b: any) => b.text || '').filter(Boolean).join('\n');
                 }
             } else {
-                // Use Pixtral vision model
-                const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${mistralApiKey}`,
-                    },
-                    body: JSON.stringify({
-                        model: "pixtral-12b-2409",
-                        messages: [
-                            {
-                                role: "user",
-                                content: [
-                                    {
-                                        type: "text",
-                                        text: "Extract all text from this image. Provide the text as it appears, maintaining the structure and formatting where possible."
-                                    },
-                                    {
-                                        type: "image_url",
-                                        image_url: {
-                                            url: dataUrl
-                                        }
+                const body = JSON.stringify({
+                    model: "pixtral-12b-2409",
+                    messages: [
+                        {
+                            role: "user",
+                            content: [
+                                {
+                                    type: "text",
+                                    text: "Extract all text from this image. Provide the text as it appears, maintaining the structure and formatting where possible."
+                                },
+                                {
+                                    type: "image_url",
+                                    image_url: {
+                                        url: dataUrl
                                     }
-                                ]
-                            }
-                        ]
-                    })
+                                }
+                            ]
+                        }
+                    ]
                 });
 
-                if (!response.ok) {
-                    throw new Error(`Mistral API error: ${response.statusText}`);
+                const retries = 3;
+                let lastResponse: Response | null = null;
+                for (let attempt = 0; attempt <= retries; attempt++) {
+                    const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${mistralApiKey}`,
+                            'Content-Length': Buffer.byteLength(body).toString(),
+                        },
+                        body: body
+                    });
+
+                    lastResponse = response;
+
+                    if (response.ok) {
+                        const chatResponse = await response.json();
+                        extractedText = chatResponse.choices[0].message.content || "";
+                        break;
+                    }
+
+                    if (response.status === 429 && attempt < retries) {
+                        const waitTime = Math.pow(2, attempt) * 1000;
+                        console.log(`Vision API Rate limit hit. Retrying in ${waitTime / 1000}s (attempt ${attempt + 1}/${retries})...`);
+                        await new Promise((resolve) => setTimeout(resolve, waitTime));
+                        continue;
+                    }
+
+                    const errorBody = await response.json().catch(() => ({}));
+                    throw new Error(`Mistral API error: Status ${response.status} - ${errorBody.message || response.statusText}`);
                 }
 
-                const chatResponse = await response.json();
-                extractedText = chatResponse.choices[0].message.content || "";
+                if (!extractedText && lastResponse && !lastResponse.ok) {
+                   // This should have been thrown already, but as a safety
+                   const errorBody = await lastResponse.json().catch(() => ({}));
+                   throw new Error(`Mistral API error: Status ${lastResponse.status} - ${errorBody.message || lastResponse.statusText}`);
+                }
             }
         } else {
             return NextResponse.json({
@@ -280,9 +303,15 @@ export async function POST(req: Request) {
             ...(devMode && { extractedText, processingMode }),
         });
     } catch (err: unknown) {
-        console.error("PROCESS_FILE_ERROR:", err);
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        console.error("PROCESS_FILE_ERROR:", errorMessage);
+
         if (err && typeof err === "object") {
-            console.error("PROCESS_FILE_ERROR_DETAIL:", JSON.stringify(err));
+            try {
+                console.error("PROCESS_FILE_ERROR_DETAIL:", JSON.stringify(err));
+            } catch (e) {
+                // ignore
+            }
         }
 
         // Clean up orphaned file rows when chunk insertion fails

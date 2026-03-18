@@ -34,15 +34,30 @@ export async function POST(req: Request) {
     /* --------------------------------------------------
      * 1️⃣ FETCH WHATSAPP CONFIG (11za)
      * -------------------------------------------------- */
-    const { data: phoneConfig } = await supabase
+    // Normalize phone numbers by removing '+' if present
+    const cleanTo = payload.to.replace('+', '');
+    const cleanFrom = payload.from.replace('+', '');
+
+    console.log(`🔍 Looking for config for number: ${cleanTo} (Original: ${payload.to})`);
+
+    const { data: phoneConfig, error: configError } = await supabase
       .from("phone_document_mapping")
       .select("auth_token, origin")
-      .eq("phone_number", payload.to)
-      .single();
+      .eq("phone_number", cleanTo)
+      .limit(1)
+      .maybeSingle();
+
+    if (configError) {
+      console.error("❌ Database error fetching config:", configError);
+    }
 
     if (!phoneConfig) {
-      console.error("❌ WhatsApp config missing");
-      return NextResponse.json({ success: false });
+      console.error(`❌ WhatsApp config missing for number: ${cleanTo}`);
+      // Log available numbers for debugging
+      const { data: allNumbers } = await supabase.from("phone_document_mapping").select("phone_number").limit(5);
+      console.log("Recently mapped numbers in DB:", allNumbers?.map(n => n.phone_number));
+      
+      return NextResponse.json({ success: false, error: "Config missing" });
     }
 
     const { auth_token, origin } = phoneConfig;
