@@ -22,7 +22,7 @@ export type AutoResponseResult = {
 async function detectLanguage(text: string): Promise<string> {
   try {
     const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      model: "llama-3.1-8b-instant",
       temperature: 0,
       messages: [
         {
@@ -166,7 +166,7 @@ ${contextText ? contextText : (isGreetingOrAck ? "[User is greeting you. Respond
 
     console.log("🤖 [AUTO RESPONDER] Calling Groq API...");
     const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      model: "llama-3.1-8b-instant",
       temperature: 0.2,
       max_tokens: 500,
       messages: messagesPayload as any,

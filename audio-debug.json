@@ -1,0 +1,194 @@
+[
+  {
+    "id": 382,
+    "message_id": "wamid.HBgMOTE3ODIwODcwNTE5FQIAEhgWM0VCMDIzOENCMUJDMkE5MTI4MkJEMAA=",
+    "channel": "whatsapp",
+    "from_number": "917820870519",
+    "to_number": "15558903791",
+    "received_at": "2026-03-24T12:06:13+00:00",
+    "content_type": "media",
+    "content_text": null,
+    "sender_name": "Khushi Dinesh Krishnani",
+    "event_type": "MoMessage",
+    "is_in_24_window": false,
+    "is_responded": false,
+    "auto_respond_sent": false,
+    "response_message_id": null,
+    "response_sent_at": null,
+    "raw_payload": {
+      "to": "15558903791",
+      "from": "917820870519",
+      "event": "MoMessage",
+      "channel": "whatsapp",
+      "content": {
+        "media": {
+          "url": "https://engees11zamedia.11za.in/prateektosniwalpvt/Receive/AUD/AUD-22104663569274519.ogg",
+          "type": "audio"
+        },
+        "contentType": "media"
+      },
+      "whatsapp": {
+        "senderName": "Khushi Dinesh Krishnani"
+      },
+      "messageId": "wamid.HBgMOTE3ODIwODcwNTE5FQIAEhgWM0VCMDIzOENCMUJDMkE5MTI4MkJEMAA=",
+      "timestamp": "2026-03-24T12:06:13Z",
+      "receivedAt": "2026-03-24T12:06:13Z",
+      "isResponded": false,
+      "isin24window": true
+    },
+    "created_at": "2026-03-24T12:06:18.956205+00:00",
+    "updated_at": "2026-03-24T12:06:18.956205+00:00"
+  },
+  {
+    "id": 380,
+    "message_id": "wamid.HBgMOTE3ODIwODcwNTE5FQIAEhgWM0VCMDdFNjI4RThBQjcxNEUxOTBCRgA=",
+    "channel": "whatsapp",
+    "from_number": "917820870519",
+    "to_number": "15558903791",
+    "received_at": "2026-03-24T12:05:57+00:00",
+    "content_type": "text",
+    "content_text": "ok",
+    "sender_name": "Khushi Dinesh Krishnani",
+    "event_type": "MoMessage",
+    "is_in_24_window": false,
+    "is_responded": false,
+    "auto_respond_sent": false,
+    "response_message_id": null,
+    "response_sent_at": null,
+    "raw_payload": {
+      "to": "15558903791",
+      "from": "917820870519",
+      "event": "MoMessage",
+      "channel": "whatsapp",
+      "content": {
+        "text": "ok",
+        "contentType": "text"
+      },
+      "whatsapp": {
+        "senderName": "Khushi Dinesh Krishnani"
+      },
+      "messageId": "wamid.HBgMOTE3ODIwODcwNTE5FQIAEhgWM0VCMDdFNjI4RThBQjcxNEUxOTBCRgA=",
+      "timestamp": "2026-03-24T12:05:57Z",
+      "receivedAt": "2026-03-24T12:05:57Z",
+      "isResponded": false,
+      "UserResponse": "ok",
+      "isin24window": true
+    },
+    "created_at": "2026-03-24T12:05:59.554816+00:00",
+    "updated_at": "2026-03-24T12:05:59.554816+00:00"
+  },
+  {
+    "id": 378,
+    "message_id": "wamid.HBgMOTE3ODIwODcwNTE5FQIAEhgWM0VCMDhGREMxNzU4MjQ5MUQzQ0Q5OQA=",
+    "channel": "whatsapp",
+    "from_number": "917820870519",
+    "to_number": "15558903791",
+    "received_at": "2026-03-24T12:05:13+00:00",
+    "content_type": "text",
+    "content_text": "what kind of support does 11za provide",
+    "sender_name": "Khushi Dinesh Krishnani",
+    "event_type": "MoMessage",
+    "is_in_24_window": false,
+    "is_responded": false,
+    "auto_respond_sent": false,
+    "response_message_id": null,
+    "response_sent_at": null,
+    "raw_payload": {
+      "to": "15558903791",
+      "from": "917820870519",
+      "event": "MoMessage",
+      "channel": "whatsapp",
+      "content": {
+        "text": "what kind of support does 11za provide",
+        "contentType": "text"
+      },
+      "whatsapp": {
+        "senderName": "Khushi Dinesh Krishnani"
+      },
+      "messageId": "wamid.HBgMOTE3ODIwODcwNTE5FQIAEhgWM0VCMDhGREMxNzU4MjQ5MUQzQ0Q5OQA=",
+      "timestamp": "2026-03-24T12:05:13Z",
+      "receivedAt": "2026-03-24T12:05:13Z",
+      "isResponded": false,
+      "UserResponse": "what kind of support does 11za provide",
+      "isin24window": true
+    },
+    "created_at": "2026-03-24T12:05:15.789829+00:00",
+    "updated_at": "2026-03-24T12:05:15.789829+00:00"
+  },
+  {
+    "id": 376,
+    "message_id": "wamid.HBgMOTE3ODIwODcwNTE5FQIAEhgWM0VCMDNFRUJDQTJEOTgwRkY5MDg2QQA=",
+    "channel": "whatsapp",
+    "from_number": "917820870519",
+    "to_number": "15558903791",
+    "received_at": "2026-03-24T12:04:15+00:00",
+    "content_type": "text",
+    "content_text": "how to integrate shopify",
+    "sender_name": "Khushi Dinesh Krishnani",
+    "event_type": "MoMessage",
+    "is_in_24_window": false,
+    "is_responded": false,
+    "auto_respond_sent": false,
+    "response_message_id": null,
+    "response_sent_at": null,
+    "raw_payload": {
+      "to": "15558903791",
+      "from": "917820870519",
+      "event": "MoMessage",
+      "channel": "whatsapp",
+      "content": {
+        "text": "how to integrate shopify",
+        "contentType": "text"
+      },
+      "whatsapp": {
+        "senderName": "Khushi Dinesh Krishnani"
+      },
+      "messageId": "wamid.HBgMOTE3ODIwODcwNTE5FQIAEhgWM0VCMDNFRUJDQTJEOTgwRkY5MDg2QQA=",
+      "timestamp": "2026-03-24T12:04:15Z",
+      "receivedAt": "2026-03-24T12:04:15Z",
+      "isResponded": false,
+      "UserResponse": "how to integrate shopify",
+      "isin24window": true
+    },
+    "created_at": "2026-03-24T12:04:17.237565+00:00",
+    "updated_at": "2026-03-24T12:04:17.237565+00:00"
+  },
+  {
+    "id": 374,
+    "message_id": "wamid.HBgMOTE3ODIwODcwNTE5FQIAEhgWM0VCMEM4MUNBOTNCNEIyQTRFMzE3MwA=",
+    "channel": "whatsapp",
+    "from_number": "917820870519",
+    "to_number": "15558903791",
+    "received_at": "2026-03-24T12:03:43+00:00",
+    "content_type": "text",
+    "content_text": "tell me about features and servicess",
+    "sender_name": "Khushi Dinesh Krishnani",
+    "event_type": "MoMessage",
+    "is_in_24_window": false,
+    "is_responded": false,
+    "auto_respond_sent": false,
+    "response_message_id": null,
+    "response_sent_at": null,
+    "raw_payload": {
+      "to": "15558903791",
+      "from": "917820870519",
+      "event": "MoMessage",
+      "channel": "whatsapp",
+      "content": {
+        "text": "tell me about features and servicess",
+        "contentType": "text"
+      },
+      "whatsapp": {
+        "senderName": "Khushi Dinesh Krishnani"
+      },
+      "messageId": "wamid.HBgMOTE3ODIwODcwNTE5FQIAEhgWM0VCMEM4MUNBOTNCNEIyQTRFMzE3MwA=",
+      "timestamp": "2026-03-24T12:03:43Z",
+      "receivedAt": "2026-03-24T12:03:43Z",
+      "isResponded": false,
+      "UserResponse": "tell me about features and servicess",
+      "isin24window": true
+    },
+    "created_at": "2026-03-24T12:03:46.213826+00:00",
+    "updated_at": "2026-03-24T12:03:46.213826+00:00"
+  }
+]

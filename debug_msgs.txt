@@ -1,0 +1,61 @@
+﻿Fetching latest 10 messages from whatsapp_messages...
+[0] ID: 367
+    From: 917820870519 -> To: 15558903791
+    Text: hey
+    Event: MoMessage | Time: 2026-03-24T11:32:01+00:00
+    Message ID: wamid.HBgMOTE3ODIwODcwNTE5FQIAEhgWM0VCMDRENEU3MjU5NTZDQkI1Rjc0OQA=
+-------------------------------------------
+[1] ID: 366
+    From: 917820870519 -> To: 15558903791
+    Text: hi
+    Event: MoMessage | Time: 2026-03-24T11:07:31+00:00
+    Message ID: wamid.HBgMOTE3ODIwODcwNTE5FQIAEhgWM0VCMDQ2NzE5N0JFNUNFRTRDOEMyNAA=
+-------------------------------------------
+[2] ID: 365
+    From: 917820870519 -> To: 15558903791
+    Text: hey
+    Event: MoMessage | Time: 2026-03-24T11:04:16+00:00
+    Message ID: wamid.HBgMOTE3ODIwODcwNTE5FQIAEhgWM0VCMDVFQkFEQkE3RThCMTIwRTUyQgA=
+-------------------------------------------
+[3] ID: 364
+    From: 917820870519 -> To: 15558903791
+    Text: hi
+    Event: MoMessage | Time: 2026-03-24T10:59:56+00:00
+    Message ID: wamid.HBgMOTE3ODIwODcwNTE5FQIAEhgWM0VCMDhBODQ5QzYwMkMyNzM5MzdEQQA=
+-------------------------------------------
+[4] ID: 363
+    From: 917820870519 -> To: 15558903791
+    Text: hii
+    Event: MoMessage | Time: 2026-03-24T10:51:45+00:00
+    Message ID: wamid.HBgMOTE3ODIwODcwNTE5FQIAEhgWM0VCMEM4OTczOTM5RjJBNzA0OEY5MgA=
+-------------------------------------------
+[5] ID: 362
+    From: 917820870519 -> To: 15558903791
+    Text: hy
+    Event: MoMessage | Time: 2026-03-24T10:41:30+00:00
+    Message ID: wamid.HBgMOTE3ODIwODcwNTE5FQIAEhgWM0VCMDkzRDU0Q0I0OEEyMDBBNDg2RQA=
+-------------------------------------------
+[6] ID: 361
+    From: 917820870519 -> To: 15558903791
+    Text: hy
+    Event: MoMessage | Time: 2026-03-24T10:24:09+00:00
+    Message ID: wamid.HBgMOTE3ODIwODcwNTE5FQIAEhgWM0VCMEE4REU2MTJGRTVDMzdERUMxNQA=
+-------------------------------------------
+[7] ID: 360
+    From: 917820870519 -> To: 15558903791
+    Text: hey
+    Event: MoMessage | Time: 2026-03-24T10:17:45+00:00
+    Message ID: wamid.HBgMOTE3ODIwODcwNTE5FQIAEhgWM0VCMDM1MkU5MjhERDUwMDFBOUI1OAA=
+-------------------------------------------
+[8] ID: 359
+    From: 917820870519 -> To: 15558903791
+    Text: hii
+    Event: MoMessage | Time: 2026-03-24T10:17:20+00:00
+    Message ID: wamid.HBgMOTE3ODIwODcwNTE5FQIAEhgWM0VCMEU2RkVDOEFCRDc3RTY3NjA3MAA=
+-------------------------------------------
+[9] ID: 358
+    From: 917820870519 -> To: 15558903791
+    Text: hey
+    Event: MoMessage | Time: 2026-03-24T10:07:17+00:00
+    Message ID: wamid.HBgMOTE3ODIwODcwNTE5FQIAEhgWM0VCMEJCOTJEQTk1MTZDMkI3N0ZEMwA=
+-------------------------------------------
