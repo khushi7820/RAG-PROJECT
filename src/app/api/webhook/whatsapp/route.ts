@@ -176,13 +176,14 @@ export async function POST(req: Request) {
 
       if (!decision) {
         console.log("🤖 Pass to AI Auto Responder...");
-        await generateAutoResponse(
+        const response = await generateAutoResponse(
             payload.from,
             payload.to,
             finalText,
             payload.messageId,
             mediaUrl || undefined
         );
+        console.log("✅ Auto response result:", response?.success ? "SUCCESS" : "FAILED", response?.error);
         return NextResponse.json({ success: true });
       }
 
@@ -197,13 +198,14 @@ export async function POST(req: Request) {
       if (!session) {
         // ⚠️ No active session - pass to AI Auto Responder instead
         console.log("🤖 No active session - Pass to AI Auto Responder...");
-        await generateAutoResponse(
+        const response = await generateAutoResponse(
             payload.from,
             payload.to,
             finalText,
             payload.messageId,
             mediaUrl || undefined
         );
+        console.log("✅ Auto response result:", response?.success ? "SUCCESS" : "FAILED", response?.error);
         return NextResponse.json({ success: true });
       }
 
@@ -264,6 +266,18 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ success: true });
       }
+    }
+
+    // If no text could be extracted, send error message
+    if (!finalText) {
+      console.log("⚠️ No text extracted from message, sending error response...");
+      await sendWhatsAppMessage(
+        payload.from,
+        "Sorry, I couldn't understand that message. Please send text or voice.",
+        auth_token,
+        origin
+      );
+      return NextResponse.json({ success: true });
     }
 
     return NextResponse.json({ success: true });
