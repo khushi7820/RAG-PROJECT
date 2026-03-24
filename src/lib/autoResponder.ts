@@ -91,18 +91,23 @@ export async function generateAutoResponse(
     let language = "english";
 
     if (!userText && mediaUrl) {
+      console.log("🎙️ [AUTO RESPONDER] Processing audio from mediaUrl:", mediaUrl);
       const transcript = await speechToText(mediaUrl);
       if (!transcript?.text) {
+        console.error("❌ [AUTO RESPONDER] Voice transcription failed for:", mediaUrl);
         return { success: false, error: "Voice transcription failed" };
       }
       userText = transcript.text.trim();
+      console.log("📝 [AUTO RESPONDER] Audio transcribed to:", userText);
     }
 
     if (userText) {
       language = await detectLanguage(userText);
+      console.log("🌐 [AUTO RESPONDER] Detected language:", language);
     }
 
     if (!userText) {
+      console.warn("⚠️ [AUTO RESPONDER] No text to respond to.");
       return { success: false, error: "Empty message" };
     }
 
@@ -112,7 +117,7 @@ export async function generateAutoResponse(
       .select("content_text, event_type")
       .or(`from_number.eq.${fromNumber},to_number.eq.${fromNumber}`)
       .order("received_at", { ascending: true })
-      .limit(20);
+      .limit(10); // Reduced history a bit to save tokens
 
     const history: { role: "user" | "assistant"; content: string }[] = (
       historyRows || []
@@ -134,7 +139,7 @@ export async function generateAutoResponse(
         const matches = await retrieveRelevantChunksFromFiles(
           embedding,
           fileIds,
-          3 // Reduced the context chunks from 5 to 3 to keep it focused
+          2 // Even fewer chunks for speed and stability
         );
         contextText = matches.map((m) => m.chunk).join("\n\n");
       }
@@ -144,17 +149,13 @@ export async function generateAutoResponse(
     const systemPrompt = `
 ${system_prompt || "You are a helpful WhatsApp assistant."}
 
-CRITICAL INSTRUCTIONS:
-1. STRICT LANGUAGE BINDING (MANDATORY): You MUST reply entirely in ${language.toUpperCase()} because the user is answering in ${language.toUpperCase()}. IGNORE the language of past messages. If the user speaks English, your answer MUST be English.
-2. TRANSLATE CONTEXT: If the CONTEXT provided below is in Hindi or Hinglish, YOU MUST TRANSLATE IT to ${language.toUpperCase()} before replying to the user. Do NOT copy the context exactly if it doesn't match the user's language.
-3. DIRECT ANSWERS ONLY: Answer exactly what the user asks without adding extra fluff. If they say they don't want to talk about a feature, APOLOGIZE BRIEFLY and STOP. Never force a topic.
-4. NO FEATURE SPAM: Do NOT bring up features (like Multi-Agent System) unless explicitly asked in the latest message.
-5. GREETINGS/ACKS: If the user says "hi", "okk", "yes", "tell me more", etc., answer them directly without feature dumping unless it answers their specific question.
-6. KNOWLEDGE BOUNDARY (STRICT): If the user asks a specific question and the answer is NOT present in the CONTEXT below, you MUST politely state that you do not have that information and ask if they have any other questions about 11za. NEVER use your internal knowledge to answer beyond what is in the CONTEXT. This rule does NOT apply to simple greetings (hi, hello, etc.) or positive acknowledgments (ok, yes).
-7. STYLE: Keep replies to 1-2 short sentences, friendly, human-like (WhatsApp-style). Use light emojis 😊.
+### MANDATORY RULES:
+1. **REPLY IN ${language.toUpperCase()}**: The user is speaking in ${language.toUpperCase()}. You MUST reply ONLY in ${language.toUpperCase()}. No Hinglish if they ask in pure English. No English if they ask in pure Hindi. Mirror their style perfectly.
+2. **STAY CONCISE**: 1-2 short sentences maximum.
+3. **ONLY USE CONTEXT**: If the answer isn't in the context below, say "Iske liye mere paas abhi sahi jankari nahi hai." in the user's language.
 
 CONTEXT:
-${contextText ? contextText : (isGreetingOrAck ? "[User is greeting you. Respond warmly and ask how you can help with 11za.]" : "[CRITICAL: No relevant information found in knowledge base. Politely decline the request.]")}
+${contextText ? contextText : (isGreetingOrAck ? "[User is greeting. Reply politely in their language.]" : "[No data found. Decline politely.]")}
 `;
 
     /* 7️⃣ LLM */
