@@ -40,6 +40,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  console.log("🔥 WEBHOOK HIT");
   try {
     const payload = await req.json();
     console.log("📩 WEBHOOK POST RECEIVED", { messageId: payload?.messageId, from: payload?.from, to: payload?.to, event: payload?.event });
