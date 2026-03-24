@@ -2,6 +2,8 @@
  * WhatsApp Message Sender using 11za.in API
  */
 
+const WHATSAPP_API_URL = "https://api.11za.in/apis/sendMessage/sendMessages";
+
 export type SendMessageResult = {
     success: boolean;
     error?: string;
@@ -34,9 +36,9 @@ export async function sendWhatsAppMessage(
             text: message,
         };
 
-        console.log(`Sending WhatsApp message to ${phoneNumber} via ${originWebsite}...`);
+        console.log(`Sending WhatsApp message to ${phoneNumber}...`);
 
-        const response = await fetch(originWebsite, {
+        const response = await fetch(WHATSAPP_API_URL, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
