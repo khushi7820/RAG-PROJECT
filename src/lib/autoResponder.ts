@@ -54,8 +54,6 @@ export async function generateAutoResponse(
   mediaUrl?: string
 ): Promise<AutoResponseResult> {
   try {
-    console.log(`🤖 AUTO RESPONDER CALLED - From: ${fromNumber}, To: ${toNumber}, HasText: ${!!messageText}, HasMedia: ${!!mediaUrl}`);
-    
     /* 1️⃣ FILE MAPPING */
     const fileIds = await getFilesForPhoneNumber(toNumber);
 
@@ -177,7 +175,6 @@ ${contextText ? contextText : (isGreetingOrAck ? "[User is greeting you. Respond
     response = formatWhatsAppResponse(response);
 
     /* 8️⃣ SEND WHATSAPP */
-    console.log(`📤 Sending response to ${fromNumber}: "${response.substring(0, 50)}..."`);
     const send = await sendWhatsAppMessage(
       fromNumber,
       response,
@@ -186,10 +183,8 @@ ${contextText ? contextText : (isGreetingOrAck ? "[User is greeting you. Respond
     );
 
     if (!send.success) {
-      console.error("❌ Failed to send WhatsApp message:", send.error);
       return { success: false, error: send.error };
     }
-    console.log("✅ WhatsApp message sent successfully");
 
     /* 9️⃣ SAVE RESPONSE */
     await supabase.from("whatsapp_messages").insert([
