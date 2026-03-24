@@ -54,10 +54,14 @@ export async function generateAutoResponse(
   mediaUrl?: string
 ): Promise<AutoResponseResult> {
   try {
+    console.log("🤖 [AUTO RESPONDER] Called with:", { fromNumber, toNumber, hasText: !!messageText, hasMedia: !!mediaUrl });
+    
     /* 1️⃣ FILE MAPPING */
     const fileIds = await getFilesForPhoneNumber(toNumber);
+    console.log("📁 Files found:", fileIds.length);
 
     if (fileIds.length === 0) {
+      console.error("❌ [AUTO RESPONDER] No files configured for", toNumber);
       return {
         success: false,
         noDocuments: true,
@@ -160,19 +164,23 @@ ${contextText ? contextText : (isGreetingOrAck ? "[User is greeting you. Respond
       { role: "user", content: userText },
     ];
 
+    console.log("🤖 [AUTO RESPONDER] Calling Groq API...");
     const completion = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",
       temperature: 0.2,
       max_tokens: 500,
       messages: messagesPayload as any,
     });
+    console.log("✅ [AUTO RESPONDER] Groq API response received");
 
     let response = completion.choices[0]?.message?.content;
     if (!response) {
+      console.error("❌ [AUTO RESPONDER] Empty AI response from Groq");
       return { success: false, error: "Empty AI response" };
     }
 
     response = formatWhatsAppResponse(response);
+    console.log("📤 [AUTO RESPONDER] Will send:", response.substring(0, 50) + "...");
 
     /* 8️⃣ SEND WHATSAPP */
     const send = await sendWhatsAppMessage(
@@ -183,8 +191,10 @@ ${contextText ? contextText : (isGreetingOrAck ? "[User is greeting you. Respond
     );
 
     if (!send.success) {
+      console.error("❌ [AUTO RESPONDER] Failed to send WhatsApp message:", send.error);
       return { success: false, error: send.error };
     }
+    console.log("✅ [AUTO RESPONDER] Message sent successfully");
 
     /* 9️⃣ SAVE RESPONSE */
     await supabase.from("whatsapp_messages").insert([
@@ -204,7 +214,8 @@ ${contextText ? contextText : (isGreetingOrAck ? "[User is greeting you. Respond
 
     return { success: true, response, sent: true };
   } catch (err) {
-    console.error("AUTO RESPONDER ERROR:", err);
+    console.error("🔥 [AUTO RESPONDER] EXCEPTION:", err instanceof Error ? err.message : err);
+    if (err instanceof Error) console.error("Stack:", err.stack);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Unknown error",

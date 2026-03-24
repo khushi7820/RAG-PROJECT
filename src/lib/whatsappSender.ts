@@ -36,35 +36,38 @@ export async function sendWhatsAppMessage(
             text: message,
         };
 
-        console.log(`Sending WhatsApp message to ${phoneNumber}...`);
+        console.log(`📤 [WHATSAPP SENDER] Sending to ${phoneNumber} via ${WHATSAPP_API_URL}`);
+    console.log(`📋 Payload:`, JSON.stringify(payload, null, 2));
 
-        const response = await fetch(WHATSAPP_API_URL, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(payload),
-        });
+    const response = await fetch(WHATSAPP_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
 
-        const data = await response.json();
+    const data = await response.json();
+    console.log(`📥 [WHATSAPP SENDER] Response status: ${response.status}`, data);
 
-        if (!response.ok) {
-            console.error("WhatsApp API error:", data);
-            return {
-                success: false,
-                error: `WhatsApp API returned ${response.status}`,
-                response: data,
-            };
-        }
+    if (!response.ok) {
+      console.error("❌ [WHATSAPP SENDER] API error:", data);
+      return {
+        success: false,
+        error: `WhatsApp API returned ${response.status}`,
+        response: data,
+      };
+    }
 
-        console.log("WhatsApp message sent successfully:", data);
+    console.log("✅ [WHATSAPP SENDER] Message sent successfully");
 
-        return {
-            success: true,
-            response: data,
-        };
+    return {
+      success: true,
+      response: data,
+    };
     } catch (error) {
-        console.error("Error sending WhatsApp message:", error);
+        console.error("❌ [WHATSAPP SENDER] Exception:", error instanceof Error ? error.message : error);
+        if (error instanceof Error) console.error("Stack:", error.stack);
         return {
             success: false,
             error: error instanceof Error ? error.message : "Unknown error",

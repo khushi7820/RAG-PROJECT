@@ -42,9 +42,10 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const payload = await req.json();
-    console.log("📩 Webhook Received");
+    console.log("📩 WEBHOOK POST RECEIVED", { messageId: payload?.messageId, from: payload?.from, to: payload?.to, event: payload?.event });
 
     if (!payload?.messageId || !payload?.from || !payload?.to) {
+      console.error("❌ Invalid payload - missing required fields");
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     }
 
@@ -101,7 +102,10 @@ export async function POST(req: Request) {
       console.error("❌ Database error inserting message:", insertError);
     }
 
+    console.log(`✅ Config found and message saved to DB. Event type: ${payload.event}`);
+    
     if (payload.event !== "MoMessage") {
+      console.log("⏭️  Not a user message, skipping auto response");
       return NextResponse.json({ success: true });
     }
 
@@ -111,6 +115,8 @@ export async function POST(req: Request) {
     let finalText: string | null = null;
     let mediaUrl: string | null = null;
     let isImage = false;
+    
+    console.log("📝 Message content type:", payload.content?.contentType);
 
     if (payload.content?.contentType === "text") {
       finalText = payload.content.text?.trim() || null;
@@ -175,15 +181,16 @@ export async function POST(req: Request) {
       )) as ConfirmationDecision;
 
       if (!decision) {
-        console.log("🤖 Pass to AI Auto Responder...");
-        await generateAutoResponse(
+        console.log("🤖 Calling auto responder...", { from: payload.from, to: payload.to, text: finalText?.substring(0, 30) });
+        const response = await generateAutoResponse(
             payload.from,
             payload.to,
             finalText,
             payload.messageId,
             mediaUrl || undefined
         );
-        return NextResponse.json({ success: true });
+        console.log("✅ Auto responder returned:", { success: response.success, error: response.error, sent: response.sent });
+        return NextResponse.json({ success: true, autoResponderResponse: response });
       }
 
       const { data: session } = await supabase
@@ -196,15 +203,16 @@ export async function POST(req: Request) {
 
       if (!session) {
         // ⚠️ No active session - pass to AI Auto Responder instead
-        console.log("🤖 No active session - Pass to AI Auto Responder...");
-        await generateAutoResponse(
+        console.log("🤖 No session, calling auto responder...", { from: payload.from, to: payload.to });
+        const response = await generateAutoResponse(
             payload.from,
             payload.to,
             finalText,
             payload.messageId,
             mediaUrl || undefined
         );
-        return NextResponse.json({ success: true });
+        console.log("✅ Auto responder returned:", { success: response.success, error: response.error, sent: response.sent });
+        return NextResponse.json({ success: true, autoResponderResponse: response });
       }
 
       // ✅ CONFIRM
@@ -266,11 +274,16 @@ export async function POST(req: Request) {
       }
     }
 
+    if (!finalText) {
+      console.warn("⚠️  No finalText extracted from message, returning");
+      return NextResponse.json({ success: true });
+    }
+
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error("🔥 WEBHOOK ERROR:", err);
+    console.error("🔥 WEBHOOK ERROR:", err instanceof Error ? err.message : err, "\nStack:", err instanceof Error ? err.stack : "");
     return NextResponse.json(
-      { error: "Webhook processing failed" },
+      { error: "Webhook processing failed", details: err instanceof Error ? err.message : String(err) },
       { status: 500 }
     );
   }
