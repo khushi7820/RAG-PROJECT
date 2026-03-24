@@ -12,7 +12,7 @@ const groq = new Groq({
  */
 export async function speechToText(
     audioUrl: string
-): Promise<{ text: string; language: string } | null> {
+): Promise<{ text: string; language: string | null } | null> {
     try {
         console.log("⬇️ Downloading audio:", audioUrl);
 
@@ -37,7 +37,7 @@ export async function speechToText(
 
         return {
             text,
-            language: "unknown", // ✅ FIX: Groq does not provide language
+            language: null, // ✅ FIX: Groq does not provide language, let autoResponder detect it
         };
 
     } catch (err) {

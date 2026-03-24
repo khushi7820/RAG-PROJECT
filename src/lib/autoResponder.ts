@@ -92,7 +92,6 @@ export async function generateAutoResponse(
         return { success: false, error: "Voice transcription failed" };
       }
       userText = transcript.text.trim();
-      language = transcript.language || (await detectLanguage(userText));
     }
 
     if (userText) {
