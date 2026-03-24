@@ -195,6 +195,15 @@ export async function POST(req: Request) {
         .single();
 
       if (!session) {
+        // ⚠️ No active session - pass to AI Auto Responder instead
+        console.log("🤖 No active session - Pass to AI Auto Responder...");
+        await generateAutoResponse(
+            payload.from,
+            payload.to,
+            finalText,
+            payload.messageId,
+            mediaUrl || undefined
+        );
         return NextResponse.json({ success: true });
       }
 
