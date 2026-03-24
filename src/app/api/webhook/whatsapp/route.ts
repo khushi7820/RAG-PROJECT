@@ -22,6 +22,23 @@ type ConfirmationDecision =
   | EditDecision
   | null;
 
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const mode = searchParams.get("hub.mode");
+  const token = searchParams.get("hub.verify_token");
+  const challenge = searchParams.get("hub.challenge");
+
+  const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN;
+
+  if (mode === "subscribe" && token === verifyToken) {
+    console.log("✅ Webhook verified");
+    return new Response(challenge, { status: 200 });
+  }
+
+  console.error("❌ Webhook verification failed");
+  return new Response("Verification failed", { status: 403 });
+}
+
 export async function POST(req: Request) {
   try {
     const payload = await req.json();
@@ -34,9 +51,9 @@ export async function POST(req: Request) {
     /* --------------------------------------------------
      * 1️⃣ FETCH WHATSAPP CONFIG (11za)
      * -------------------------------------------------- */
-    // Normalize phone numbers by removing '+' if present
-    const cleanTo = payload.to.replace('+', '');
-    const cleanFrom = payload.from.replace('+', '');
+    // Normalize phone numbers by removing '+' and any non-numeric characters (like U+200E)
+    const cleanTo = payload.to.replace(/\D/g, '');
+    const cleanFrom = payload.from.replace(/\D/g, '');
 
     console.log(`🔍 Looking for config for number: ${cleanTo} (Original: ${payload.to})`);
 
@@ -65,7 +82,7 @@ export async function POST(req: Request) {
     /* --------------------------------------------------
      * 2️⃣ SAVE RAW MESSAGE (SAFE)
      * -------------------------------------------------- */
-    await supabase.from("whatsapp_messages").insert([
+    const { error: insertError } = await supabase.from("whatsapp_messages").insert([
       {
         message_id: payload.messageId,
         channel: payload.channel,
@@ -79,6 +96,10 @@ export async function POST(req: Request) {
         raw_payload: payload,
       },
     ]);
+
+    if (insertError) {
+      console.error("❌ Database error inserting message:", insertError);
+    }
 
     if (payload.event !== "MoMessage") {
       return NextResponse.json({ success: true });

@@ -9,7 +9,7 @@ const samplePayload = {
     messageId: `test-${Date.now()}`,
     channel: "whatsapp",
     from: "917874949091",
-    to: "15558346206",
+    to: "15558903791",
     receivedAt: new Date().toISOString(),
     content: {
         contentType: "text",
@@ -39,7 +39,11 @@ async function testWebhook() {
         });
         const result1 = await response1.json();
         console.log('Status:', response1.status);
-        console.log('Response:', JSON.stringify(result1, null, 2));
+        if (response1.status !== 200) {
+            console.error('❌ Error response:', result1);
+        } else {
+            console.log('Response:', JSON.stringify(result1, null, 2));
+        }
 
         // Test 2: Send duplicate message
         console.log('\n📤 Test 2: Sending duplicate message...');

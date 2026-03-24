@@ -121,45 +121,51 @@ export async function generateAutoResponse(
       }));
 
     /* 5️⃣ RAG */
-    const embedding = await embedText(userText);
-    if (!embedding) {
-      return { success: false, error: "Embedding failed" };
+    const normalizedText = userText.trim().toLowerCase().replace(/[^\w\s]/g, "");
+    const isGreetingOrAck = /^(hi|hello|hey|good morning|good afternoon|good evening|namaste|hola|hey there|howdy|ok|okk|okay|achha|acha|oh|ohk|cool|nice|great|hmm|yes|no|haa|ha|na|how are you|how r u|kaise ho|kya hal hai)$/i.test(normalizedText);
+
+    let contextText = "";
+    if (!isGreetingOrAck) {
+      const embedding = await embedText(userText);
+      if (embedding) {
+        const matches = await retrieveRelevantChunksFromFiles(
+          embedding,
+          fileIds,
+          3 // Reduced the context chunks from 5 to 3 to keep it focused
+        );
+        contextText = matches.map((m) => m.chunk).join("\n\n");
+      }
     }
-
-    const matches = await retrieveRelevantChunksFromFiles(
-      embedding,
-      fileIds,
-      5
-    );
-
-    const contextText = matches.map((m) => m.chunk).join("\n\n");
 
     /* 6️⃣ SYSTEM PROMPT */
     const systemPrompt = `
 ${system_prompt || "You are a helpful WhatsApp assistant."}
 
-RULES:
-- NEVER mention documents or sources
-- If info not available say politely:
-  "Mere paas is topic par abhi exact data available nahi hai."
-- Short, friendly, human replies
-- Light emojis 😊
-- Reply in ${language}
+CRITICAL INSTRUCTIONS:
+1. STRICT LANGUAGE BINDING (MANDATORY): You MUST reply entirely in ${language.toUpperCase()} because the user is answering in ${language.toUpperCase()}. IGNORE the language of past messages. If the user speaks English, your answer MUST be English.
+2. TRANSLATE CONTEXT: If the CONTEXT provided below is in Hindi or Hinglish, YOU MUST TRANSLATE IT to ${language.toUpperCase()} before replying to the user. Do NOT copy the context exactly if it doesn't match the user's language.
+3. DIRECT ANSWERS ONLY: Answer exactly what the user asks without adding extra fluff. If they say they don't want to talk about a feature, APOLOGIZE BRIEFLY and STOP. Never force a topic.
+4. NO FEATURE SPAM: Do NOT bring up features (like Multi-Agent System) unless explicitly asked in the latest message.
+5. GREETINGS/ACKS: If the user says "hi", "okk", "yes", "tell me more", etc., answer them directly without feature dumping unless it answers their specific question.
+6. KNOWLEDGE BOUNDARY (STRICT): If the user asks a specific question and the answer is NOT present in the CONTEXT below, you MUST politely state that you do not have that information and ask if they have any other questions about 11za. NEVER use your internal knowledge to answer beyond what is in the CONTEXT. This rule does NOT apply to simple greetings (hi, hello, etc.) or positive acknowledgments (ok, yes).
+7. STYLE: Keep replies to 1-2 short sentences, friendly, human-like (WhatsApp-style). Use light emojis 😊.
 
 CONTEXT:
-${contextText || ""}
+${contextText ? contextText : (isGreetingOrAck ? "[User is greeting you. Respond warmly and ask how you can help with 11za.]" : "[CRITICAL: No relevant information found in knowledge base. Politely decline the request.]")}
 `;
 
     /* 7️⃣ LLM */
+    const messagesPayload = [
+      { role: "system", content: systemPrompt },
+      ...history.slice(-4),
+      { role: "user", content: userText },
+    ];
+
     const completion = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",
-      temperature: 0.3,
+      temperature: 0.2,
       max_tokens: 500,
-      messages: [
-        { role: "system", content: systemPrompt },
-        ...history.slice(-10),
-        { role: "user", content: userText },
-      ],
+      messages: messagesPayload as any,
     });
 
     let response = completion.choices[0]?.message?.content;

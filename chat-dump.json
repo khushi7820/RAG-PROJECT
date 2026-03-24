@@ -1,0 +1,35 @@
+{
+  "system_prompt": "\"Namaste! 🚀 Main 11za ka AI assistant hu. Aapko WhatsApp automation, broadcast campaigns, chatbots, ya customer engagement me help chahiye? 🤖 11za ek WhatsApp Business API platform hai jo businesses ko automate customer conversations, send broadcast messages, aur build chatbots me help karta hai. 📊 Aap kya explore karna chahte hain? 🤔\"",
+  "messages": [
+    {
+      "content_text": "hii",
+      "event_type": "MoMessage",
+      "received_at": "2026-03-18T13:02:35+00:00"
+    },
+    {
+      "content_text": "is it secure",
+      "event_type": "MoMessage",
+      "received_at": "2026-03-18T13:03:53+00:00"
+    },
+    {
+      "content_text": "hello",
+      "event_type": "MoMessage",
+      "received_at": "2026-03-18T13:06:47+00:00"
+    },
+    {
+      "content_text": "hello",
+      "event_type": "MoMessage",
+      "received_at": "2026-03-18T13:07:51+00:00"
+    },
+    {
+      "content_text": "hey",
+      "event_type": "MoMessage",
+      "received_at": "2026-03-18T13:08:18+00:00"
+    },
+    {
+      "content_text": "how to integrate",
+      "event_type": "MoMessage",
+      "received_at": "2026-03-18T13:08:55+00:00"
+    }
+  ]
+}

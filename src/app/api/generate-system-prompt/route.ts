@@ -18,100 +18,102 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        console.log("Generating system prompt for intent:", intent);
+        // ✅ UPDATED FINAL SYSTEM PROMPT
+        const systemPrompt = `
+SYSTEM GUARDRAIL PROMPT — 11za WhatsApp AI Assistant
 
-        const completion = await groq.chat.completions.create({
-            model: "llama-3.3-70b-versatile",
-            temperature: 0.6,
-            max_tokens: 500,
-            messages: [
-                {
-                    role: "system",
-                    content: `
-You are a senior Conversational AI prompt engineer.
+You are a professional WhatsApp chatbot assistant representing 11za.
 
-Your task is to generate a SYSTEM PROMPT for a WhatsApp chatbot representing the brand 11za.
+11za is a SaaS platform built on the Official WhatsApp Business API that helps businesses manage customer communication, automate conversations, send broadcast campaigns, and improve customer engagement.
 
-11za is a SaaS platform built on the Official WhatsApp Business API that helps businesses automate conversations, manage chats, send broadcast campaigns, and improve customer engagement through WhatsApp.
+========================
+LANGUAGE & AUDIO HANDLING RULES (STRICT)
+========================
 
-The generated system prompt must include the following guardrails:
+1. INPUT TYPE DETECTION
+• Detect if input is TEXT or AUDIO  
+• Then detect language  
 
-1. Language Mirroring
-The chatbot must reply in the same language as the user (Hindi, English, Hinglish).
+2. AUDIO INPUT
+• Hindi audio → Reply in Hinglish (NOT Devanagari)  
+• English audio → Reply in English  
+• Return BOTH text + audio  
 
-2. Human Conversation
-Responses must be friendly, natural, and WhatsApp-style.
-Keep replies short.
+3. TEXT INPUT
+• Hindi → Hindi  
+• Hinglish → Hinglish  
+• English → English  
 
-3. Greeting Handling
-If a user sends "hi", "hello", or "hey", greet them and ask how you can help with 11za.
+4. CURRENT MESSAGE PRIORITY
+• Always follow CURRENT message language  
+• Ignore previous messages  
 
-4. Brand Representation
-Explain that 11za helps businesses automate communication using WhatsApp.
+5. NO LANGUAGE CARRY
+• Each message is independent  
 
-5. Feature Awareness
-Mention that 11za supports:
-- WhatsApp Business API
-- chat automation
-- broadcast messaging
-- chat management
-- integrations
-- analytics
+6. STRICT
+• Never mix languages  
+• Never convert audio Hindi to Devanagari  
 
-6. Knowledge Boundary
-Never mention internal sources like:
-documents, datasets, knowledge base, training data.
+========================
+CASUAL HANDLING
+========================
+• ok / thanks → You're welcome 😊 Let me know if you need anything else.  
+• haan → Theek hai 😊 Batao kaise help karu  
+• no → Theek hai 👍 Future me help chahiye ho to bata dena  
 
-7. Response Length
-Responses should be short (2–4 lines).
+========================
+GREETING
+========================
+Hi 😊 Main 11ZA assistant hoon. Aapko kis cheez me help chahiye?
 
-8. Fallback Rule
-If the information is not available, politely say so and offer help with another question.
+========================
+RAG RULE
+========================
+• Answer ONLY from context  
+• Understand intent  
+• Do NOT hallucinate  
 
-Generate ONLY the system prompt text.
-Do not add explanation.
-Keep it under 250 words.
-          `.trim(),
-                },
-                {
-                    role: "user",
-                    content: `
-Create a system prompt for a WhatsApp chatbot with this intent:
+If not found:
+"Sorry, iske liye mere paas exact information nahi hai.
 
-"${intent}"
-          `.trim(),
-                },
-            ],
-        });
+📞 +91 9726654060  
+📧 info@11za.com"
 
-        const systemPrompt = completion.choices?.[0]?.message?.content?.trim();
+========================
+FORMAT
+========================
+• Short replies (2–4 lines)  
+• Bullet points for features  
 
-        if (!systemPrompt) {
-            throw new Error("Failed to generate system prompt");
-        }
+========================
+SPECIAL
+========================
+Demo → https://calendly.com/engees/schedule-a-demo  
+Signup → https://11za.com/signup-form/
 
-        console.log("Generated system prompt:", systemPrompt);
+========================
+GOAL
+========================
+Be helpful, accurate, short, and human-like.
+        `;
 
-        // Check if phone number already exists
-        const { data: existingMappings, error: selectError } = await supabase
+        // DB logic same
+        const { data: existingMappings } = await supabase
             .from("phone_document_mapping")
             .select("*")
             .eq("phone_number", phone_number);
 
-        if (selectError) throw selectError;
-
         if (existingMappings && existingMappings.length > 0) {
-            const { error: updateError } = await supabase
+            await supabase
                 .from("phone_document_mapping")
                 .update({
                     intent,
                     system_prompt: systemPrompt,
                 })
                 .eq("phone_number", phone_number);
-
-            if (updateError) throw updateError;
         } else {
-            const { error: insertError } = await supabase
+            await supabase
                 .from("phone_document_mapping")
                 .insert({
                     phone_number,
@@ -119,8 +121,6 @@ Create a system prompt for a WhatsApp chatbot with this intent:
                     system_prompt: systemPrompt,
                     file_id: null,
                 });
-
-            if (insertError) throw insertError;
         }
 
         return NextResponse.json({
@@ -128,16 +128,12 @@ Create a system prompt for a WhatsApp chatbot with this intent:
             system_prompt: systemPrompt,
             intent,
         });
+
     } catch (error) {
-        console.error("System prompt generation error:", error);
+        console.error("Error:", error);
 
         return NextResponse.json(
-            {
-                error:
-                    error instanceof Error
-                        ? error.message
-                        : "Failed to generate system prompt",
-            },
+            { error: "Failed to set system prompt" },
             { status: 500 }
         );
     }
