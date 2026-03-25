@@ -198,18 +198,18 @@ ${contextText || "No context found. Provide support contact if needed."}
     let completion;
     try {
         completion = await groq.chat.completions.create({
-            model: "llama-3.1-8b-instant",
-            temperature: 0.2,
+            model: "mixtral-8x7b-32768",
+            temperature: 0.1,
             messages: [
-                { role: "system", content: systemPrompt },
+                { role: "system", content: systemPrompt + "\nCRITICAL: If info is NOT in context, say ONLY the 'NOT FOUND' message. Do not be proactive." },
                 ...history.slice(-4),
                 { role: "user", content: userText },
-                { role: "system", content: `REMINDER: Your response MUST be in ${targetLanguage.toUpperCase()}. Absolutely NO Gujarati script.` }
+                { role: "system", content: `ROMAN SCRIPT ONLY. Absolutely NO Hindi/Gujarati script. Translate to ${targetLanguage.toUpperCase()}.` }
             ] as any,
         });
     } catch (llmErr) {
         console.error("🔥 [GROQ ERROR]:", llmErr);
-        await sendWhatsAppMessage(fromNumber, "AI is temporarily busy. Please try again soon.", auth_token!, origin!);
+        await sendWhatsAppMessage(fromNumber, "AI is temporarily busy. Please try again or contact support: info@11za.com", auth_token!, origin!);
         return { success: false, error: "LLM failed" };
     }
 
