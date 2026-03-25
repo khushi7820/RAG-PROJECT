@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["unpdf"],
   experimental: {
     serverActions: {
-      bodySizeLimit: "50mb",
+      bodySizeLimit: "4.5mb",
     },
   },
 };

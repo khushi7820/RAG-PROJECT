@@ -6,7 +6,8 @@ import { supabaseAdmin } from "@/lib/supabaseClient";
 import { Mistral } from '@mistralai/mistralai';
 
 export const runtime = "nodejs";
-export const maxDuration = 300; // 5 minutes – needed for large file processing on Vercel
+export const maxDuration = 60; // Max allowed for Vercel Free Tier (previously 300)
+export const dynamic = 'force-dynamic';
 
 const mistralApiKey = process.env.MISTRAL_API_KEY;
 
