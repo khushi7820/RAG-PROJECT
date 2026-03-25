@@ -90,7 +90,13 @@ export async function generateAutoResponse(
     console.log(`🌐 [AUTO RESPONDER] Input: ${isAudioInput ? 'Audio' : 'Text'} | Lang: ${language}`);
 
     /* 3️⃣ CHAT HISTORY & RAG */
-    const { data: historyRows } = await supabase.from("whatsapp_messages").select("content_text, event_type").or(`from_number.eq.${fromNumber},to_number.eq.${fromNumber}`).order("received_at", { ascending: true }).limit(8);
+    const { data: historyRows } = await supabase
+        .from("whatsapp_messages")
+        .select("content_text, event_type")
+        .or(`and(from_number.eq.${fromNumber},to_number.eq.${toNumber}),and(from_number.eq.${toNumber},to_number.eq.${fromNumber})`)
+        .order("received_at", { ascending: true })
+        .limit(8);
+
     const history = (historyRows || []).filter((m) => m.content_text).map((m) => ({
         role: m.event_type === "MoMessage" ? "user" : "assistant",
         content: m.content_text as string,
