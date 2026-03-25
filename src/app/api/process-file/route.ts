@@ -41,6 +41,18 @@ export async function POST(req: Request) {
         const fileName = file.name;
         const fileType = file.type;
 
+        console.log(`[Step 1] Received file: ${fileName} (${fileType}), Phone: ${phoneNumber}`);
+
+        // 0) Validate Environment Variables Early
+        if (!mistralApiKey) {
+            console.error("MISTRAL_API_KEY is missing from environment");
+            return NextResponse.json({ error: "Server Configuration Error: MISTRAL_API_KEY is missing" }, { status: 500 });
+        }
+        if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+            console.error("Supabase environment variables are missing");
+            return NextResponse.json({ error: "Server Configuration Error: Supabase credentials are missing" }, { status: 500 });
+        }
+
         // Determine file type (PDF or Image)
         let extractedText = "";
         let detectedFileType = "pdf";
@@ -158,7 +170,10 @@ export async function POST(req: Request) {
             }, { status: 400 });
         }
 
+        console.log(`[Step 2] Text extraction complete. Extracted ${extractedText.length} characters.`);
+
         // 1) Create file record with 11za credentials and file type
+        console.log("[Step 3] Creating file record in rag_files...");
         const { data: fileRow, error: fileError } = await supabase
             .from("rag_files")
             .insert({
@@ -171,19 +186,23 @@ export async function POST(req: Request) {
             .single();
 
         if (fileError) {
+            console.error("Supabase insert file error:", fileError);
             throw fileError;
         }
 
         fileId = fileRow.id as string;
+        console.log(`[Step 3] File record created with ID: ${fileId}`);
 
-        // 2) Extract text + chunk
+        // 2) Split text into chunks
         const chunks = chunkText(extractedText, 1500).filter((c) => c.trim().length > 0);
+        console.log(`[Step 4] Chunking complete. Created ${chunks.length} chunks.`);
 
         if (chunks.length === 0) {
-            throw new Error("No text chunks produced from file");
+            throw new Error("No text chunks produced from file. The document might be empty or unreadable.");
         }
 
         // 3) Build embeddings + rows with batch processing
+        console.log("[Step 5] Generating embeddings...");
         const rows: {
             file_id: string;
             pdf_name: string;
@@ -235,15 +254,18 @@ export async function POST(req: Request) {
         }
 
         // 4) Insert all chunks in one go
+        console.log(`[Step 6] Inserting ${rows.length} chunks into rag_chunks...`);
         const { error: insertError } = await supabase
             .from("rag_chunks")
             .insert(rows);
 
         if (insertError) {
+            console.error("Supabase insert chunks error:", insertError);
             throw insertError;
         }
 
-        // 5) Check if phone number mapping already exists
+        // 5) Update phone number mapping
+        console.log("[Step 7] Updating phone document mapping...");
         const { data: existingMappings } = await supabase
             .from("phone_document_mapping")
             .select("*")
@@ -308,24 +330,33 @@ export async function POST(req: Request) {
             phone_number: phoneNumber,
             ...(devMode && { extractedText, processingMode }),
         });
-    } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : String(err);
-        console.error("PROCESS_FILE_ERROR:", errorMessage);
+    } catch (err: any) {
+        console.error("PROCESS_FILE_ERROR:", err);
 
-        if (err && typeof err === "object") {
-            try {
-                console.error("PROCESS_FILE_ERROR_DETAIL:", JSON.stringify(err));
-            } catch (e) {
-                // ignore
-            }
+        // Attempt to extract a useful error message from various possible error objects
+        let message = "Unknown error during processing";
+        
+        if (err instanceof Error) {
+            message = err.message;
+        } else if (typeof err === "string") {
+            message = err;
+        } else if (err && typeof err === "object") {
+            // Handle Supabase/fetch style error objects
+            message = err.message || err.error_description || err.error || JSON.stringify(err);
         }
+
+        console.error("PROCESS_FILE_ERROR_MESSAGE:", message);
 
         // Clean up orphaned file rows when chunk insertion fails
         if (fileId) {
-            void supabase.from("rag_files").delete().eq("id", fileId);
+            console.log(`[Cleanup] Deleting orphaned file record: ${fileId}`);
+            try {
+                await supabase.from("rag_files").delete().eq("id", fileId);
+            } catch (cleanupErr) {
+                console.error("[Cleanup] Failed to delete orphaned file record:", cleanupErr);
+            }
         }
 
-        const message = err instanceof Error ? err.message : "Unknown error";
         return NextResponse.json({ error: message }, { status: 500 });
     }
 }
