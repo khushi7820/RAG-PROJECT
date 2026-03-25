@@ -1,0 +1,16 @@
+{
+  "functions": {
+    "src/app/api/process-file/route.ts": {
+      "maxDuration": 300,
+      "memory": 1024
+    },
+    "src/app/api/generate-system-prompt/route.ts": {
+      "maxDuration": 60,
+      "memory": 512
+    },
+    "src/app/api/webhook/route.ts": {
+      "maxDuration": 60,
+      "memory": 512
+    }
+  }
+}

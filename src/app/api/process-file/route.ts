@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { Mistral } from '@mistralai/mistralai';
 
 export const runtime = "nodejs";
+export const maxDuration = 300; // 5 minutes – needed for large file processing on Vercel
 
 const mistralApiKey = process.env.MISTRAL_API_KEY;
 
@@ -190,9 +191,12 @@ export async function POST(req: Request) {
             embedding: number[];
         }[] = [];
 
-        // Process in batches of 55 to stay under rate limit (60/min with buffer)
-        const BATCH_SIZE = 55;
-        const BATCH_DELAY_MS = 61000; // Wait 61s between batches
+        // Process in batches of 20 with a short delay between batches.
+        // NOTE: 61s delay was removed — it caused Vercel function timeouts.
+        // Mistral allows 60 req/min; batches of 20 with 3s delay = ~400/min
+        // which is safe because embedText() already has per-request retry logic.
+        const BATCH_SIZE = 20;
+        const BATCH_DELAY_MS = 3000; // 3s between batches keeps us well under rate limits
 
         for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
             const batch = chunks.slice(i, i + BATCH_SIZE);
@@ -201,10 +205,12 @@ export async function POST(req: Request) {
 
             console.log(`Processing batch ${batchNumber}/${totalBatches} (${batch.length} chunks)...`);
 
-            // Process batch in parallel
-            const embeddings = await Promise.all(
-                batch.map((chunk) => embedText(chunk))
-            );
+            // Process batch sequentially to avoid hammering the rate limit
+            const embeddings: number[][] = [];
+            for (const chunk of batch) {
+                const embedding = await embedText(chunk);
+                embeddings.push(embedding);
+            }
 
             // Validate and add to rows
             for (let j = 0; j < batch.length; j++) {
@@ -221,9 +227,9 @@ export async function POST(req: Request) {
                 });
             }
 
-            // Wait before next batch (except for the last batch)
+            // Short pause between batches (except for the last batch)
             if (i + BATCH_SIZE < chunks.length) {
-                console.log(`Waiting ${BATCH_DELAY_MS / 1000}s before next batch to avoid rate limits...`);
+                console.log(`Batch ${batchNumber} done. Waiting ${BATCH_DELAY_MS}ms before next batch...`);
                 await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY_MS));
             }
         }
