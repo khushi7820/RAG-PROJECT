@@ -112,7 +112,7 @@ export async function generateAutoResponse(
     if (!isGreetingOrAck) {
       const embedding = await embedText(userText);
       if (embedding) {
-        const matches = await retrieveRelevantChunksFromFiles(embedding, fileIds, 5);
+        const matches = await retrieveRelevantChunksFromFiles(embedding, fileIds, 8);
         contextText = matches.map((m) => m.chunk).join("\n\n");
       }
     }
@@ -203,8 +203,8 @@ ${contextText || "No context found. Provide support contact if needed."}
             messages: [
                 { role: "system", content: systemPrompt + "\nCRITICAL RULES:\n1. ONLY USE ROMAN SCRIPT (ABC). Absolutely NO Devanagari/Hindi script (अ, क).\n2. If info is NOT in context, say EXACTLY: 'Lekin iske liye MERE paas abhi sahi jankari nahi hai. Par aap hamari team se contact kar sakte hain: \\n📞 +91 9726654060 | 📧 info@11za.com'. NOTHING ELSE." },
                 ...history.slice(-4),
-                { role: "user", content: userText },
-                { role: "system", content: `MANDATORY: NO HINDI SCRIPT. Respond in ROMAN CHARACTERS.` }
+                { role: "user", content: `(MANDATORY: RESPOND ONLY IN ROMAN CHARACTERS/HINGLISH SCRIPT. NO DEVANAGARI.)\n\n${userText}` },
+                { role: "system", content: `MANDATORY: NO HINDI SCRIPT. Respond in ROMAN CHARACTERS ONLY.` }
             ] as any,
         });
     } catch (llmErr) {
