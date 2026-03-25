@@ -1,11 +1,13 @@
-import { extractText, getDocumentProxy } from "unpdf";
+import { extractText } from "unpdf";
 
 export async function extractPdfText(buffer: ArrayBuffer): Promise<string> {
-    const uint8 = new Uint8Array(buffer);
-    const pdf = await getDocumentProxy(uint8);
-    const { text } = await extractText(pdf, { mergePages: true });
-
-    // `text` is a single string (since mergePages:true)
-    // You can optionally do: textArray when mergePages:false
-    return text;
+    try {
+        const uint8 = new Uint8Array(buffer);
+        const result = await extractText(uint8, { mergePages: true });
+        
+        return result?.text || "";
+    } catch (error) {
+        console.error("Error in extractPdfText:", error);
+        throw new Error(`PDF Parsing failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
 }

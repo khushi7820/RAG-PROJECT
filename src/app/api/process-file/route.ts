@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { extractPdfText } from "@/lib/pdf";
 import { chunkText } from "@/lib/chunk";
 import { embedText } from "@/lib/embeddings";
-import { supabase } from "@/lib/supabaseClient";
+import { supabaseAdmin } from "@/lib/supabaseClient";
 import { Mistral } from '@mistralai/mistralai';
 
 export const runtime = "nodejs";
@@ -64,12 +64,6 @@ export async function POST(req: Request) {
         } else if (fileType.startsWith("image/")) {
             console.log("Processing image file:", fileName);
             detectedFileType = "image";
-
-            if (!mistralApiKey) {
-                return NextResponse.json({
-                    error: "Mistral API key is not configured for image processing"
-                }, { status: 500 });
-            }
 
             const base64Image = Buffer.from(buffer).toString('base64');
             const dataUrl = `data:${fileType};base64,${base64Image}`;
@@ -174,7 +168,7 @@ export async function POST(req: Request) {
 
         // 1) Create file record with 11za credentials and file type
         console.log("[Step 3] Creating file record in rag_files...");
-        const { data: fileRow, error: fileError } = await supabase
+        const { data: fileRow, error: fileError } = await supabaseAdmin
             .from("rag_files")
             .insert({
                 name: fileName,
@@ -255,7 +249,7 @@ export async function POST(req: Request) {
 
         // 4) Insert all chunks in one go
         console.log(`[Step 6] Inserting ${rows.length} chunks into rag_chunks...`);
-        const { error: insertError } = await supabase
+        const { error: insertError } = await supabaseAdmin
             .from("rag_chunks")
             .insert(rows);
 
@@ -266,7 +260,7 @@ export async function POST(req: Request) {
 
         // 5) Update phone number mapping
         console.log("[Step 7] Updating phone document mapping...");
-        const { data: existingMappings } = await supabase
+        const { data: existingMappings } = await supabaseAdmin
             .from("phone_document_mapping")
             .select("*")
             .eq("phone_number", phoneNumber);
@@ -276,7 +270,7 @@ export async function POST(req: Request) {
 
         if (placeholderMapping) {
             // Update the existing placeholder mapping with the file_id and credentials
-            const { error: mappingError } = await supabase
+            const { error: mappingError } = await supabaseAdmin
                 .from("phone_document_mapping")
                 .update({
                     file_id: fileId,
@@ -291,7 +285,7 @@ export async function POST(req: Request) {
             }
         } else if (existingMappings && existingMappings.length > 0) {
             // Add new file to existing phone number (create additional mapping)
-            const { error: mappingError } = await supabase
+            const { error: mappingError } = await supabaseAdmin
                 .from("phone_document_mapping")
                 .insert({
                     phone_number: phoneNumber,
@@ -307,7 +301,7 @@ export async function POST(req: Request) {
             }
         } else {
             // Create new phone number mapping with intent and credentials
-            const { error: mappingError } = await supabase
+            const { error: mappingError } = await supabaseAdmin
                 .from("phone_document_mapping")
                 .insert({
                     phone_number: phoneNumber,
@@ -351,7 +345,7 @@ export async function POST(req: Request) {
         if (fileId) {
             console.log(`[Cleanup] Deleting orphaned file record: ${fileId}`);
             try {
-                await supabase.from("rag_files").delete().eq("id", fileId);
+                await supabaseAdmin.from("rag_files").delete().eq("id", fileId);
             } catch (cleanupErr) {
                 console.error("[Cleanup] Failed to delete orphaned file record:", cleanupErr);
             }

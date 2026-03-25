@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabaseClient";
+import { supabaseAdmin } from "@/lib/supabaseClient";
 
 export async function POST(req: NextRequest) {
     try {
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
         console.log("Updating phone settings for:", phone_number);
 
         // Check if phone number has any mappings
-        const { data: existingMappings } = await supabase
+        const { data: existingMappings } = await supabaseAdmin
             .from("phone_document_mapping")
             .select("*")
             .eq("phone_number", phone_number);
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
         if (auth_token !== undefined) updateData.auth_token = auth_token;
         if (origin !== undefined) updateData.origin = origin;
 
-        const { error: updateMappingError } = await supabase
+        const { error: updateMappingError } = await supabaseAdmin
             .from("phone_document_mapping")
             .update(updateData)
             .eq("phone_number", phone_number);
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
                 if (auth_token !== undefined) updateFileData.auth_token = auth_token;
                 if (origin !== undefined) updateFileData.origin = origin;
 
-                const { error: updateFileError } = await supabase
+                const { error: updateFileError } = await supabaseAdmin
                     .from("rag_files")
                     .update(updateFileData)
                     .in("id", fileIds);

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabaseClient";
+import { supabaseAdmin } from "@/lib/supabaseClient";
 
 // GET: Retrieve phone-document mappings
 export async function GET(req: Request) {
@@ -8,7 +8,7 @@ export async function GET(req: Request) {
         const phoneNumber = searchParams.get("phone_number");
         const fileId = searchParams.get("file_id");
 
-        let query = supabase
+        let query = supabaseAdmin
             .from("phone_document_view")
             .select("*")
             .order("created_at", { ascending: false });
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
             );
         }
 
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
             .from("phone_document_mapping")
             .insert([{ phone_number, file_id }])
             .select();
@@ -93,7 +93,7 @@ export async function DELETE(req: Request) {
             );
         }
 
-        let query = supabase.from("phone_document_mapping").delete();
+        let query = supabaseAdmin.from("phone_document_mapping").delete();
 
         if (id) {
             query = query.eq("id", id);
