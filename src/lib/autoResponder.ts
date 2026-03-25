@@ -195,19 +195,29 @@ ${contextText || "No context found. Provide support contact if needed."}
     }
 
     /* 6️⃣ LLM (FOR RAG QUERIES) */
-    const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
-      temperature: 0.2,
-      messages: [
-        { role: "system", content: systemPrompt },
-        ...history.slice(-4),
-        { role: "user", content: userText },
-        { role: "system", content: `REMINDER: Your response MUST be in ${targetLanguage.toUpperCase()}. Absolutely NO Gujarati script.` }
-      ] as any,
-    });
+    let completion;
+    try {
+        completion = await groq.chat.completions.create({
+            model: "llama-3.3-70b-versatile",
+            temperature: 0.2,
+            messages: [
+                { role: "system", content: systemPrompt },
+                ...history.slice(-4),
+                { role: "user", content: userText },
+                { role: "system", content: `REMINDER: Your response MUST be in ${targetLanguage.toUpperCase()}. Absolutely NO Gujarati script.` }
+            ] as any,
+        });
+    } catch (llmErr) {
+        console.error("🔥 [GROQ ERROR]:", llmErr);
+        await sendWhatsAppMessage(fromNumber, "AI is temporarily busy. Please try again soon.", auth_token!, origin!);
+        return { success: false, error: "LLM failed" };
+    }
 
     let response = formatWhatsAppResponse(completion.choices[0]?.message?.content || "");
-    if (!response) return { success: false, error: "Empty AI response" };
+    if (!response) {
+        await sendWhatsAppMessage(fromNumber, "Maafi, response nahi ban paya. Please try again.", auth_token!, origin!);
+        return { success: false, error: "Empty AI response" };
+    }
 
     /* 6️⃣ TTS GENERATION (IF AUDIO INPUT) */
     let responseMediaUrl: string | undefined = undefined;
