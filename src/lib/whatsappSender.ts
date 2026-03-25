@@ -135,3 +135,68 @@ export async function sendWhatsAppTemplate(
         };
     }
 }
+
+/**
+ * Send a media message (audio, image, etc.) via WhatsApp using 11za.in API
+ */
+export async function sendWhatsAppMedia(
+    phoneNumber: string,
+    mediaUrl: string,
+    contentType: "audio" | "image" | "file",
+    authToken: string,
+    originWebsite: string
+): Promise<SendMessageResult> {
+    try {
+        if (!authToken || !originWebsite) {
+            return {
+                success: false,
+                error: "WhatsApp API credentials not provided",
+            };
+        }
+
+        const payload = {
+            sendto: phoneNumber,
+            authToken: authToken,
+            originWebsite: originWebsite,
+            contentType: "media",
+            media: {
+                url: mediaUrl,
+                type: contentType, // e.g., "audio" or "image"
+            },
+        };
+
+        console.log(`📤 [WHATSAPP SENDER] Sending ${contentType} to ${phoneNumber} via ${WHATSAPP_API_URL}`);
+        
+        const response = await fetch(WHATSAPP_API_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            console.error(`❌ [WHATSAPP SENDER] ${contentType} API error:`, data);
+            return {
+                success: false,
+                error: `WhatsApp API returned ${response.status}`,
+                response: data,
+            };
+        }
+
+        console.log(`✅ [WHATSAPP SENDER] ${contentType} sent successfully`);
+
+        return {
+            success: true,
+            response: data,
+        };
+    } catch (error) {
+        console.error(`❌ [WHATSAPP SENDER] Exception sending ${contentType}:`, error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : "Unknown error",
+        };
+    }
+}

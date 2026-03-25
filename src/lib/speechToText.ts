@@ -36,6 +36,7 @@ export async function speechToText(
         const transcription = await groq.audio.transcriptions.create({
             file: fs.createReadStream(audioPath),
             model: "whisper-large-v3",
+            prompt: "11ZA, WhatsApp API, SaaS, automation, CRM, integration, chatbot, pricing, features, support", // Help Whisper recognize 11ZA and context
         });
 
         fs.unlinkSync(audioPath);

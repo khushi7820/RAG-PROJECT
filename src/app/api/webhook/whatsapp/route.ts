@@ -142,6 +142,9 @@ export async function POST(req: Request) {
       }
     }
 
+    const isAudioInput = payload.content?.contentType === "media" && 
+      (payload.content.media?.type === "voice" || payload.content.media?.type === "audio");
+
     /* --------------------------------------------------
      * 4️⃣ IMAGE → OCR PIPELINE
      * -------------------------------------------------- */
@@ -188,7 +191,8 @@ export async function POST(req: Request) {
             payload.to,
             finalText,
             payload.messageId,
-            mediaUrl || undefined
+            mediaUrl || undefined,
+            isAudioInput
         );
         console.log("✅ Auto responder returned:", { success: response.success, error: response.error, sent: response.sent });
         return NextResponse.json({ success: true, autoResponderResponse: response });
@@ -210,7 +214,8 @@ export async function POST(req: Request) {
             payload.to,
             finalText,
             payload.messageId,
-            mediaUrl || undefined
+            mediaUrl || undefined,
+            isAudioInput
         );
         console.log("✅ Auto responder returned:", { success: response.success, error: response.error, sent: response.sent });
         return NextResponse.json({ success: true, autoResponderResponse: response });
