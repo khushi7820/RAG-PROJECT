@@ -155,20 +155,46 @@ Rules:
 - If info is missing, use ONLY the support contact.
 
 CONTEXT:
-${contextText || (
-    isGreeting ? "User said Hi. Reply: 'Hello! 👋 Welcome to 11ZA! Kaise help karu aaj?'" :
-    isSupport ? "User needs support. Provide ONLY: 📞 +91 9726654060 | 📧 info@11za.com" :
-    isAck ? (
-        userText.toLowerCase().match(/ok|thank|thanks|shukriya|accha|okay|thik/) ? "Reply: 'You're welcome 😊 Let me know if you need anything else.'" :
-        userText.toLowerCase().match(/haan|yes|han|ji/) ? "Reply: 'Theek hai 😊 Batao kaise help karu?'" :
-        "Reply: 'Theek hai 👍 Agar future me help chahiye ho to bata dena.'"
-    ) :
-    "No relevant context found. Inform them and give support contact: +91 9726654060 | info@11za.com"
-)}
+${contextText || "No context found. Provide support contact if needed."}
 `;
 
+    /* 5️⃣ SHORT-CIRCUIT FOR CASUAL (SAVE TOKENS & FIX HALLUCINATION) */
+    if (isGreetingOrAck) {
+        let casualResponse = "";
+        const lower = userText.toLowerCase();
+        
+        if (isGreeting) {
+            casualResponse = "Hello! 👋 Welcome to 11ZA! Kaise help karu aaj?";
+        } else if (isSupport) {
+            casualResponse = "Zaroor! Aap 11za team se yaha contact kar sakte hain: \n📞 +91 9726654060 | 📧 info@11za.com";
+        } else if (isAck) {
+            if (lower.match(/ok|thank|thanks|shukriya|accha|okay|thik/)) {
+                casualResponse = "You're welcome 😊 Let me know if you need anything else.";
+            } else if (lower.match(/haan|yes|han|ji/)) {
+                casualResponse = "Theek hai 😊 Batao kaise help karu?";
+            } else {
+                casualResponse = "Theek hai 👍 Agar future me help chahiye ho to bata dena.";
+            }
+        }
 
-    /* 5️⃣ LLM */
+        if (casualResponse) {
+            console.log("⚡ [AUTO RESPONDER] Short-circuiting with casual response");
+            const sendTextRes = await sendWhatsAppMessage(fromNumber, casualResponse, auth_token!, origin!);
+            if (sendTextRes.success) {
+                await supabase.from("whatsapp_messages").insert([{
+                    message_id: `auto_${messageId}_${Date.now()}`,
+                    from_number: toNumber,
+                    to_number: fromNumber,
+                    content_text: casualResponse,
+                    event_type: "MtMessage",
+                    is_in_24_window: true,
+                }]);
+                return { success: true, response: casualResponse, sent: true };
+            }
+        }
+    }
+
+    /* 6️⃣ LLM (FOR RAG QUERIES) */
     const completion = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",
       temperature: 0.2,
