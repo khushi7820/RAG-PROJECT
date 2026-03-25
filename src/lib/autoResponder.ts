@@ -1,9 +1,10 @@
-import { supabase } from "./supabaseClient";
+import { supabaseAdmin as supabase } from "./supabaseClient";
 import { embedText } from "./embeddings";
 import { retrieveRelevantChunksFromFiles } from "./retrieval";
 import { getFilesForPhoneNumber } from "./phoneMapping";
-import { sendWhatsAppMessage } from "./whatsappSender";
+import { sendWhatsAppMessage, sendWhatsAppMedia } from "./whatsappSender";
 import { speechToText } from "./speechToText";
+import { generateTTS } from "./ttsService";
 import Groq from "groq-sdk";
 
 const groq = new Groq({
@@ -13,6 +14,7 @@ const groq = new Groq({
 export type AutoResponseResult = {
   success: boolean;
   response?: string;
+  mediaUrl?: string;
   error?: string;
   noDocuments?: boolean;
   sent?: boolean;
@@ -27,13 +29,11 @@ async function detectLanguage(text: string): Promise<string> {
       messages: [
         {
           role: "system",
-          content:
-            "Detect the language. Reply ONLY with language name like English, Hindi, Gujarati.",
+          content: "Detect the language. Reply ONLY with one of: English, Hindi, Hinglish.",
         },
         { role: "user", content: text },
       ],
     });
-
     return completion.choices[0]?.message?.content?.toLowerCase() || "english";
   } catch {
     return "english";
@@ -51,175 +51,163 @@ export async function generateAutoResponse(
   toNumber: string,
   messageText: string | null,
   messageId: string,
-  mediaUrl?: string
+  mediaUrl?: string,
+  isAudioInput: boolean = false
 ): Promise<AutoResponseResult> {
   try {
-    console.log("🤖 [AUTO RESPONDER] Called with:", { fromNumber, toNumber, hasText: !!messageText, hasMedia: !!mediaUrl });
+    console.log("🤖 [AUTO RESPONDER] Called with:", { fromNumber, toNumber, hasText: !!messageText, isAudio: isAudioInput });
     
-    /* 1️⃣ FILE MAPPING */
+    /* 1️⃣ FILE MAPPING & CONFIG */
     const fileIds = await getFilesForPhoneNumber(toNumber);
-    console.log("📁 Files found:", fileIds.length);
+    if (fileIds.length === 0) return { success: false, noDocuments: true, error: "No data configured" };
 
-    if (fileIds.length === 0) {
-      console.error("❌ [AUTO RESPONDER] No files configured for", toNumber);
-      return {
-        success: false,
-        noDocuments: true,
-        error: "No data configured",
-      };
-    }
-
-    /* 2️⃣ PHONE CONFIG */
-    const { data: phoneMappings } = await supabase
+    const { data: mappingRows } = await supabase
       .from("phone_document_mapping")
       .select("system_prompt, auth_token, origin")
       .eq("phone_number", toNumber)
+      .order("created_at", { ascending: false })
       .limit(1);
 
-    if (!phoneMappings?.length) {
-      return { success: false, error: "Phone configuration missing" };
-    }
+    if (!mappingRows || mappingRows.length === 0) return { success: false, error: "Phone configuration missing" };
+    const { system_prompt, auth_token, origin } = mappingRows[0];
 
-    const { system_prompt, auth_token, origin } = phoneMappings[0];
-
-    if (!auth_token || !origin) {
-      return { success: false, error: "WhatsApp credentials missing" };
-    }
-
-    /* 3️⃣ INPUT NORMALIZATION */
+    /* 2️⃣ INPUT NORMALIZATION */
     let userText = messageText?.trim() || "";
-    let language = "english";
-
     if (!userText && mediaUrl) {
-      console.log("🎙️ [AUTO RESPONDER] Processing audio from mediaUrl:", mediaUrl);
       const transcript = await speechToText(mediaUrl);
-      if (!transcript?.text) {
-        console.error("❌ [AUTO RESPONDER] Voice transcription failed for:", mediaUrl);
-        return { success: false, error: "Voice transcription failed" };
-      }
+      if (!transcript?.text) return { success: false, error: "Voice transcription failed" };
       userText = transcript.text.trim();
-      console.log("📝 [AUTO RESPONDER] Audio transcribed to:", userText);
     }
+    if (!userText) return { success: false, error: "Empty message" };
+    
+    // 🔍 Fix common mishearings (like VANVANZA -> 11ZA)
+    userText = userText.replace(/vanvanza/gi, "11ZA");
+    
+    const language = await detectLanguage(userText);
+    console.log(`🌐 [AUTO RESPONDER] Input: ${isAudioInput ? 'Audio' : 'Text'} | Lang: ${language}`);
 
-    if (userText) {
-      language = await detectLanguage(userText);
-      console.log("🌐 [AUTO RESPONDER] Detected language:", language);
-    }
-
-    if (!userText) {
-      console.warn("⚠️ [AUTO RESPONDER] No text to respond to.");
-      return { success: false, error: "Empty message" };
-    }
-
-    /* 4️⃣ CHAT HISTORY */
-    const { data: historyRows } = await supabase
-      .from("whatsapp_messages")
-      .select("content_text, event_type")
-      .or(`from_number.eq.${fromNumber},to_number.eq.${fromNumber}`)
-      .order("received_at", { ascending: true })
-      .limit(10); // Reduced history a bit to save tokens
-
-    const history: { role: "user" | "assistant"; content: string }[] = (
-      historyRows || []
-    )
-      .filter((m) => m.content_text)
-      .map((m) => ({
+    /* 3️⃣ CHAT HISTORY & RAG */
+    const { data: historyRows } = await supabase.from("whatsapp_messages").select("content_text, event_type").or(`from_number.eq.${fromNumber},to_number.eq.${fromNumber}`).order("received_at", { ascending: true }).limit(8);
+    const history = (historyRows || []).filter((m) => m.content_text).map((m) => ({
         role: m.event_type === "MoMessage" ? "user" : "assistant",
         content: m.content_text as string,
-      }));
+    }));
 
-    /* 5️⃣ RAG */
-    const normalizedText = userText.trim().toLowerCase().replace(/[^\w\s]/g, "");
-    const isGreetingOrAck = /^(hi|hello|hey|good morning|good afternoon|good evening|namaste|hola|hey there|howdy|ok|okk|okay|achha|acha|oh|ohk|cool|nice|great|hmm|yes|no|haa|ha|na|how are you|how r u|kaise ho|kya hal hai)$/i.test(normalizedText);
+    const normalizedText = userText.toLowerCase().replace(/[^\w\s]/g, "");
+    const isGreeting = /^(hi|hello|hey|namaste|helo|hye|hii|hiii|yoo)$/i.test(normalizedText);
+    const isAck = /^(ok|okay|yes|no|thank|thanks|shukriya|haan|nahi|nah)$/i.test(normalizedText);
+    const isSupport = /^(support|help|contact|customer care|number|call|email)$/i.test(normalizedText);
+    const isGreetingOrAck = isGreeting || isAck || isSupport;
 
     let contextText = "";
     if (!isGreetingOrAck) {
       const embedding = await embedText(userText);
       if (embedding) {
-        const matches = await retrieveRelevantChunksFromFiles(
-          embedding,
-          fileIds,
-          2 // Even fewer chunks for speed and stability
-        );
+        const matches = await retrieveRelevantChunksFromFiles(embedding, fileIds, 8);
         contextText = matches.map((m) => m.chunk).join("\n\n");
       }
     }
 
-    /* 6️⃣ SYSTEM PROMPT */
-    const systemPrompt = `
-${system_prompt || "You are a helpful WhatsApp assistant."}
+    /* 4️⃣ STRICT LANGUAGE MATRIX & SYSTEM PROMPT */
+    let targetLanguage = language;
+    let langInstruction = "";
 
-### MANDATORY RULES:
-1. **REPLY IN ${language.toUpperCase()}**: The user is speaking in ${language.toUpperCase()}. You MUST reply ONLY in ${language.toUpperCase()}. No Hinglish if they ask in pure English. No English if they ask in pure Hindi. Mirror their style perfectly.
-2. **STAY CONCISE**: 1-2 short sentences maximum.
-3. **ONLY USE CONTEXT**: If the answer isn't in the context below, say "Iske liye mere paas abhi sahi jankari nahi hai." in the user's language.
+    if (isAudioInput) {
+        if (language === "hindi" || language === "hinglish") {
+            targetLanguage = "hinglish";
+            langInstruction = "REPLY IN HINGLISH ONLY (Hindi words written in Roman/English script). Example: 'Aapka plan ₹10,000 se shuru hota hai.' — No Devanagari (हिन्दी), No Gujarati (ગુજરાતી), No other scripts.";
+        } else {
+            targetLanguage = "english";
+            langInstruction = "REPLY IN ENGLISH ONLY. No Hindi, no Gujarati, no other languages.";
+        }
+    } else {
+        if (language === "hindi") {
+            langInstruction = "REPLY IN HINDI (Devanagari script) ONLY. No Gujarati, no other languages.";
+        } else if (language === "hinglish") {
+            langInstruction = "REPLY IN HINGLISH ONLY (Hindi words in Roman script). No Devanagari, no Gujarati.";
+        } else {
+            targetLanguage = "english";
+            langInstruction = "REPLY IN ENGLISH ONLY. No Hindi, no Gujarati, no other languages.";
+        }
+    }
+
+    const systemPrompt = `
+=== ABSOLUTE LANGUAGE RULE — FOLLOW THIS FIRST AND ALWAYS ===
+${langInstruction}
+The FAQ/context below may be written in Gujarati, Hindi, or another language.
+You MUST translate the entire answer into ${targetLanguage.toUpperCase()} before responding.
+NEVER output Gujarati script (ગુ), never output any language other than ${targetLanguage.toUpperCase()}.
+This rule OVERRIDES everything else.
+=============================================================
+
+${system_prompt || "You are a helpful WhatsApp assistant for 11za."}
+
+Rules:
+- Give the FULL and COMPLETE answer from the CONTEXT. Do NOT summarize or shorten.
+- Be direct and friendly. 😊
+- If you cannot find the answer in the context, say: "I don't have that specific information yet. Please contact support at +91 9726654060 or info@11za.com."
 
 CONTEXT:
-${contextText ? contextText : (isGreetingOrAck ? "[User is greeting. Reply politely in their language.]" : "[No data found. Decline politely.]")}
+${contextText ? contextText : (
+    isGreeting ? "User is greeting. Reply with a warm welcome to 11ZA and ask how you can help." :
+    isSupport ? "User needs support. Provide 11za support contact: +91 9726654060 or info@11za.com." :
+    isAck ? "User is acknowledging. Reply politely." :
+    "No relevant context found. Politely inform the user and provide support contact: +91 9726654060 or info@11za.com."
+)}
 `;
 
-    /* 7️⃣ LLM */
-    const messagesPayload = [
-      { role: "system", content: systemPrompt },
-      ...history.slice(-4),
-      { role: "user", content: userText },
-    ];
 
-    console.log("🤖 [AUTO RESPONDER] Calling Groq API...");
+    /* 5️⃣ LLM */
     const completion = await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant",
+      model: "llama-3.3-70b-versatile",
       temperature: 0.2,
-      max_tokens: 500,
-      messages: messagesPayload as any,
+      messages: [
+        { role: "system", content: systemPrompt },
+        ...history.slice(-4),
+        { role: "user", content: userText },
+      ] as any,
     });
-    console.log("✅ [AUTO RESPONDER] Groq API response received");
 
-    let response = completion.choices[0]?.message?.content;
-    if (!response) {
-      console.error("❌ [AUTO RESPONDER] Empty AI response from Groq");
-      return { success: false, error: "Empty AI response" };
+    let response = formatWhatsAppResponse(completion.choices[0]?.message?.content || "");
+    if (!response) return { success: false, error: "Empty AI response" };
+
+    /* 6️⃣ TTS GENERATION (IF AUDIO INPUT) */
+    let responseMediaUrl: string | undefined = undefined;
+    if (isAudioInput) {
+        const hostedUrl = await generateTTS(response, targetLanguage === "hinglish" ? "hi" : "en");
+        if (hostedUrl) {
+            responseMediaUrl = hostedUrl;
+            console.log("🎙️ [AUTO RESPONDER] Audio hosted at:", responseMediaUrl);
+        }
     }
 
-    response = formatWhatsAppResponse(response);
-    console.log("📤 [AUTO RESPONDER] Will send:", response.substring(0, 50) + "...");
+    /* 7️⃣ SEND & SAVE */
+    // Send Text First
+    const sendText = await sendWhatsAppMessage(fromNumber, response, auth_token!, origin!);
+    if (!sendText.success) return { success: false, error: sendText.error };
 
-    /* 8️⃣ SEND WHATSAPP */
-    const send = await sendWhatsAppMessage(
-      fromNumber,
-      response,
-      auth_token,
-      origin
-    );
-
-    if (!send.success) {
-      console.error("❌ [AUTO RESPONDER] Failed to send WhatsApp message:", send.error);
-      return { success: false, error: send.error };
+    // Send Audio Second (if applicable)
+    if (isAudioInput && responseMediaUrl) {
+        console.log("📤 [AUTO RESPONDER] Sending voice note...");
+        await sendWhatsAppMedia(fromNumber, responseMediaUrl, "audio", auth_token!, origin!);
     }
-    console.log("✅ [AUTO RESPONDER] Message sent successfully");
 
-    /* 9️⃣ SAVE RESPONSE */
-    await supabase.from("whatsapp_messages").insert([
-      {
+    // Save result to DB
+    await supabase.from("whatsapp_messages").insert([{
         message_id: `auto_${messageId}_${Date.now()}`,
         channel: "whatsapp",
         from_number: toNumber,
         to_number: fromNumber,
         received_at: new Date().toISOString(),
-        content_type: "text",
         content_text: response,
         sender_name: "AI Assistant",
         event_type: "MtMessage",
         is_in_24_window: true,
-      },
-    ]);
+    }]);
 
-    return { success: true, response, sent: true };
+    return { success: true, response, sent: true, mediaUrl: responseMediaUrl };
   } catch (err) {
-    console.error("🔥 [AUTO RESPONDER] EXCEPTION:", err instanceof Error ? err.message : err);
-    if (err instanceof Error) console.error("Stack:", err.stack);
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : "Unknown error",
-    };
+    console.error("🔥 [AUTO RESPONDER] EXCEPTION:", err);
+    return { success: false, error: String(err) };
   }
 }

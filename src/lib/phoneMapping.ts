@@ -1,4 +1,4 @@
-import { supabase } from "./supabaseClient";
+import { supabaseAdmin as supabase } from "./supabaseClient";
 
 /**
  * Get all file IDs mapped to a phone number
