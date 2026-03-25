@@ -72,6 +72,10 @@ ${contextText || "No document context found for this query."}
       {
         role: "user",
         content: message
+      },
+      {
+        role: "system",
+        content: "MIRROR the user's current message language EXACTLY. Reply ONLY in English, Hindi, or Hinglish as appropriate. POSITIVELY NO GUJARATI SCRIPT."
       }
     ];
 

@@ -24,17 +24,20 @@ export type AutoResponseResult = {
 async function detectLanguage(text: string): Promise<string> {
   try {
     const completion = await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant",
+      model: "llama-3.3-70b-versatile",
       temperature: 0,
       messages: [
         {
           role: "system",
-          content: "Detect the language. Reply ONLY with one of: English, Hindi, Hinglish.",
+          content: "Detect if the text is English, Hindi, or Hinglish (Hindi in Roman script). Reply ONLY with the word: English, Hindi, or Hinglish.",
         },
         { role: "user", content: text },
       ],
     });
-    return completion.choices[0]?.message?.content?.toLowerCase() || "english";
+    const detected = completion.choices[0]?.message?.content?.toLowerCase() || "";
+    if (detected.includes("hinglish")) return "hinglish";
+    if (detected.includes("hindi")) return "hindi";
+    return "english";
   } catch {
     return "english";
   }
@@ -165,6 +168,7 @@ ${contextText ? contextText : (
         { role: "system", content: systemPrompt },
         ...history.slice(-4),
         { role: "user", content: userText },
+        { role: "system", content: `REMINDER: Your response MUST be in ${targetLanguage.toUpperCase()}. Absolutely NO Gujarati script.` }
       ] as any,
     });
 
