@@ -156,10 +156,14 @@ Rules:
 
 CONTEXT:
 ${contextText || (
-    isGreeting ? "User is greeting. Reply ONLY with a warm welcome to 11ZA (under 10 words) and ask how you can help." :
-    isSupport ? "User needs support. Provide ONLY the contact: +91 9726654060 | info@11za.com" :
-    isAck ? "User acknowledged. Reply with a polite closing." :
-    "No relevant context found. Politely inform them and give support contact: +91 9726654060 | info@11za.com"
+    isGreeting ? "User said Hi. Reply: 'Hello! 👋 Welcome to 11ZA! Kaise help karu aaj?'" :
+    isSupport ? "User needs support. Provide ONLY: 📞 +91 9726654060 | 📧 info@11za.com" :
+    isAck ? (
+        userText.toLowerCase().match(/ok|thank|thanks|shukriya|accha|okay|thik/) ? "Reply: 'You're welcome 😊 Let me know if you need anything else.'" :
+        userText.toLowerCase().match(/haan|yes|han|ji/) ? "Reply: 'Theek hai 😊 Batao kaise help karu?'" :
+        "Reply: 'Theek hai 👍 Agar future me help chahiye ho to bata dena.'"
+    ) :
+    "No relevant context found. Inform them and give support contact: +91 9726654060 | info@11za.com"
 )}
 `;
 
