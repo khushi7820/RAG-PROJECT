@@ -112,7 +112,7 @@ export async function generateAutoResponse(
     if (!isGreetingOrAck) {
       const embedding = await embedText(userText);
       if (embedding) {
-        const matches = await retrieveRelevantChunksFromFiles(embedding, fileIds, 8);
+        const matches = await retrieveRelevantChunksFromFiles(embedding, fileIds, 5);
         contextText = matches.map((m) => m.chunk).join("\n\n");
       }
     }
@@ -198,7 +198,7 @@ ${contextText || "No context found. Provide support contact if needed."}
     let completion;
     try {
         completion = await groq.chat.completions.create({
-            model: "llama-3.3-70b-versatile",
+            model: "llama-3.1-8b-instant",
             temperature: 0.2,
             messages: [
                 { role: "system", content: systemPrompt },
