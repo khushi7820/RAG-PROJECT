@@ -38,7 +38,7 @@ Rules:
 • NEVER hallucinate names like "VANVANZA".
 
 NOT FOUND MESSAGE:
-"Iske liye mere paas abhi sahi jankari nahi hai. Par aap hamari team se contact kar sakte hain: 
+"Iske liye MERE paas abhi sahi jankari nahi hai. Par aap hamari team se contact kar sakte hain: 
 📞 +91 9726654060 | 📧 info@11za.com"
 `;
 

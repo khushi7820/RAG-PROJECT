@@ -201,15 +201,15 @@ ${contextText || "No context found. Provide support contact if needed."}
             model: "llama-3.1-8b-instant",
             temperature: 0.1,
             messages: [
-                { role: "system", content: systemPrompt + "\nCRITICAL RULES:\n1. ONLY USE ROMAN SCRIPT (ABC). Absolutely NO Devanagari/Hindi script (अ, क).\n2. If info is NOT in context, do NOT be helpful. Say ONLY the 'NOT FOUND' message." },
+                { role: "system", content: systemPrompt + "\nCRITICAL RULES:\n1. ONLY USE ROMAN SCRIPT (ABC). Absolutely NO Devanagari/Hindi script (अ, क).\n2. If info is NOT in context, say EXACTLY: 'Lekin iske liye MERE paas abhi sahi jankari nahi hai. Par aap hamari team se contact kar sakte hain: \\n📞 +91 9726654060 | 📧 info@11za.com'. NOTHING ELSE." },
                 ...history.slice(-4),
                 { role: "user", content: userText },
-                { role: "system", content: `MANDATORY: NO HINDI SCRIPT. ONLY ROMAN CHARACTERS. Translate to ${targetLanguage.toUpperCase()}.` }
+                { role: "system", content: `MANDATORY: NO HINDI SCRIPT. Respond in ROMAN CHARACTERS.` }
             ] as any,
         });
     } catch (llmErr) {
         console.error("🔥 [GROQ ERROR]:", llmErr);
-        await sendWhatsAppMessage(fromNumber, "AI is temporarily busy. Please try again or contact support: info@11za.com", auth_token!, origin!);
+        await sendWhatsAppMessage(fromNumber, "Iske liye MERE paas abhi sahi jankari nahi hai. Please contact: info@11za.com", auth_token!, origin!);
         return { success: false, error: "LLM failed" };
     }
 
