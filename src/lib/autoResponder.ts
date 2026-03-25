@@ -198,13 +198,13 @@ ${contextText || "No context found. Provide support contact if needed."}
     let completion;
     try {
         completion = await groq.chat.completions.create({
-            model: "mixtral-8x7b-32768",
+            model: "llama-3.1-8b-instant",
             temperature: 0.1,
             messages: [
-                { role: "system", content: systemPrompt + "\nCRITICAL: If info is NOT in context, say ONLY the 'NOT FOUND' message. Do not be proactive." },
+                { role: "system", content: systemPrompt + "\nCRITICAL RULES:\n1. ONLY USE ROMAN SCRIPT (ABC). Absolutely NO Devanagari/Hindi script (अ, क).\n2. If info is NOT in context, do NOT be helpful. Say ONLY the 'NOT FOUND' message." },
                 ...history.slice(-4),
                 { role: "user", content: userText },
-                { role: "system", content: `ROMAN SCRIPT ONLY. Absolutely NO Hindi/Gujarati script. Translate to ${targetLanguage.toUpperCase()}.` }
+                { role: "system", content: `MANDATORY: NO HINDI SCRIPT. ONLY ROMAN CHARACTERS. Translate to ${targetLanguage.toUpperCase()}.` }
             ] as any,
         });
     } catch (llmErr) {
