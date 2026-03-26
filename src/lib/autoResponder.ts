@@ -104,7 +104,7 @@ export async function generateAutoResponse(
 
     const normalizedText = userText.toLowerCase().replace(/[^\w\s]/g, "");
     const isGreeting = /^(hi|hello|hey|namaste|helo|hye|hii|hiii|yoo)$/i.test(normalizedText);
-    const isAck = /^(ok|okay|yes|no|thank|thanks|shukriya|haan|nahi|nah)$/i.test(normalizedText);
+    const isAck = /^(ok|okk|okey|okay|k|kk|yes|yep|yup|ya|haa|haan|han|ji|thik|theek|acha|accha|hm|hmm|hmmm|no|nah|nahi|thank|thanks|shukriya)$/i.test(normalizedText);
     const isSupport = /^(support|help|contact|customer care|number|call|email)$/i.test(normalizedText);
     const isGreetingOrAck = isGreeting || isAck || isSupport;
 
@@ -168,9 +168,9 @@ ${contextText || "No context found. Provide support contact if needed."}
         } else if (isSupport) {
             casualResponse = "Zaroor! Aap 11za team se yaha contact kar sakte hain: \n📞 +91 9726654060 | 📧 info@11za.com";
         } else if (isAck) {
-            if (lower.match(/ok|thank|thanks|shukriya|accha|okay|thik/)) {
+            if (lower.match(/ok|okk|okey|okay|k|kk|thank|thanks|shukriya|accha|acha|thik|theek|hm|hmm|hmmm/)) {
                 casualResponse = "You're welcome 😊 Let me know if you need anything else.";
-            } else if (lower.match(/haan|yes|han|ji/)) {
+            } else if (lower.match(/haan|haa|yes|yep|yup|ya|han|ji/)) {
                 casualResponse = "Theek hai 😊 Batao kaise help karu?";
             } else {
                 casualResponse = "Theek hai 👍 Agar future me help chahiye ho to bata dena.";
