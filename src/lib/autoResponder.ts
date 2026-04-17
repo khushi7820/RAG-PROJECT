@@ -59,7 +59,7 @@ export async function generateAutoResponse(
 ): Promise<AutoResponseResult> {
   try {
     console.log("🤖 [AUTO RESPONDER] Called with:", { fromNumber, toNumber, hasText: !!messageText, isAudio: isAudioInput });
-    
+
     /* 1️⃣ FILE MAPPING & CONFIG */
     const fileIds = await getFilesForPhoneNumber(toNumber);
     if (fileIds.length === 0) return { success: false, noDocuments: true, error: "No data configured" };
@@ -82,24 +82,24 @@ export async function generateAutoResponse(
       userText = transcript.text.trim();
     }
     if (!userText) return { success: false, error: "Empty message" };
-    
+
     // 🔍 Fix common mishearings (like VANVANZA -> 11ZA)
     userText = userText.replace(/vanvanza/gi, "11ZA");
-    
+
     const language = await detectLanguage(userText);
     console.log(`🌐 [AUTO RESPONDER] Input: ${isAudioInput ? 'Audio' : 'Text'} | Lang: ${language}`);
 
     /* 3️⃣ CHAT HISTORY & RAG */
     const { data: historyRows } = await supabase
-        .from("whatsapp_messages")
-        .select("content_text, event_type")
-        .or(`and(from_number.eq.${fromNumber},to_number.eq.${toNumber}),and(from_number.eq.${toNumber},to_number.eq.${fromNumber})`)
-        .order("received_at", { ascending: true })
-        .limit(8);
+      .from("whatsapp_messages")
+      .select("content_text, event_type")
+      .or(`and(from_number.eq.${fromNumber},to_number.eq.${toNumber}),and(from_number.eq.${toNumber},to_number.eq.${fromNumber})`)
+      .order("received_at", { ascending: true })
+      .limit(8);
 
     const history = (historyRows || []).filter((m) => m.content_text).map((m) => ({
-        role: m.event_type === "MoMessage" ? "user" : "assistant",
-        content: m.content_text as string,
+      role: m.event_type === "MoMessage" ? "user" : "assistant",
+      content: m.content_text as string,
     }));
 
     const normalizedText = userText.toLowerCase().replace(/[^\w\s]/g, "");
@@ -122,22 +122,22 @@ export async function generateAutoResponse(
     let langInstruction = "";
 
     if (isAudioInput) {
-        if (language === "hindi" || language === "hinglish") {
-            targetLanguage = "hinglish";
-            langInstruction = "REPLY IN HINGLISH ONLY (Hindi words written in Roman/English script). Example: 'Aapka plan ₹10,000 se shuru hota hai.' — No Devanagari (हिन्दी), No Gujarati (ગુજરાતી), No other scripts.";
-        } else {
-            targetLanguage = "english";
-            langInstruction = "REPLY IN ENGLISH ONLY. No Hindi, no Gujarati, no other languages.";
-        }
+      if (language === "hindi" || language === "hinglish") {
+        targetLanguage = "hinglish";
+        langInstruction = "REPLY IN HINGLISH ONLY (Hindi words written in Roman/English script). Example: 'Aapka plan ₹10,000 se shuru hota hai.' — No Devanagari (हिन्दी), No Gujarati (ગુજરાતી), No other scripts.";
+      } else {
+        targetLanguage = "english";
+        langInstruction = "REPLY IN ENGLISH ONLY. No Hindi, no Gujarati, no other languages.";
+      }
     } else {
-        if (language === "hindi") {
-            langInstruction = "REPLY IN HINDI (Devanagari script) ONLY. No Gujarati, no other languages.";
-        } else if (language === "hinglish") {
-            langInstruction = "REPLY IN HINGLISH ONLY (Hindi words in Roman script). No Devanagari, no Gujarati.";
-        } else {
-            targetLanguage = "english";
-            langInstruction = "REPLY IN ENGLISH ONLY. No Hindi, no Gujarati, no other languages.";
-        }
+      if (language === "hindi") {
+        langInstruction = "REPLY IN HINDI (Devanagari script) ONLY. No Gujarati, no other languages.";
+      } else if (language === "hinglish") {
+        langInstruction = "REPLY IN HINGLISH ONLY (Hindi words in Roman script). No Devanagari, no Gujarati.";
+      } else {
+        targetLanguage = "english";
+        langInstruction = "REPLY IN ENGLISH ONLY. No Hindi, no Gujarati, no other languages.";
+      }
     }
 
     const systemPrompt = `
@@ -149,7 +149,7 @@ Translate EVERYTHING to ${targetLanguage.toUpperCase()}. Absolutely NO Gujarati 
 ${system_prompt || "You are a concise 11za WhatsApp assistant."}
 
 Rules:
-- STRICT FORMATTING: Use *bold* for keywords, bullet points (•) for lists, and proper line breaks.
+- FORMATTING: Use bullet points (•) for lists and proper line breaks. DO NOT use asterisks (*) for bold. Plain text is better for WhatsApp.
 - CONTENT: Keep the EXACT SAME answer from the Context. Do not shorten or change the meaning, just format it beautifully.
 - NEVER send long unstructured paragraphs.
 - Answer ONLY the specific question asked. Do not suggest extra info.
@@ -162,73 +162,73 @@ ${contextText || "No context found. Provide support contact if needed."}
 
     /* 5️⃣ SHORT-CIRCUIT FOR CASUAL (SAVE TOKENS & FIX HALLUCINATION) */
     if (isGreetingOrAck) {
-        let casualResponse = "";
-        const lower = userText.toLowerCase();
-        
-        if (isGreeting) {
-            casualResponse = "Hello! 👋 Welcome to 11ZA! Kaise help karu aaj?";
-        } else if (isSupport) {
-            casualResponse = "Zaroor! Aap 11za team se yaha contact kar sakte hain: \n📞 +91 9726654060 | 📧 info@11za.com";
-        } else if (isAck) {
-            if (lower.match(/ok|okk|okey|okay|okayy|okkay|k|kk|thank|thanks|shukriya|accha|acha|thik|theek|hm|hmm|hmmm/)) {
-                casualResponse = "You're welcome 😊 Let me know if you need anything else.";
-            } else if (lower.match(/haan|haa|yes|yep|yup|ya|han|ji/)) {
-                casualResponse = "Theek hai 😊 Batao kaise help karu?";
-            } else {
-                casualResponse = "Theek hai 👍 Agar future me help chahiye ho to bata dena.";
-            }
-        }
+      let casualResponse = "";
+      const lower = userText.toLowerCase();
 
-        if (casualResponse) {
-            console.log("⚡ [AUTO RESPONDER] Short-circuiting with casual response");
-            const sendTextRes = await sendWhatsAppMessage(fromNumber, casualResponse, auth_token!, origin!);
-            if (sendTextRes.success) {
-                await supabase.from("whatsapp_messages").insert([{
-                    message_id: `auto_${messageId}_${Date.now()}`,
-                    from_number: toNumber,
-                    to_number: fromNumber,
-                    content_text: casualResponse,
-                    event_type: "MtMessage",
-                    is_in_24_window: true,
-                }]);
-                return { success: true, response: casualResponse, sent: true };
-            }
+      if (isGreeting) {
+        casualResponse = "Hello! 👋 Welcome to 11ZA! Kaise help karu aaj?";
+      } else if (isSupport) {
+        casualResponse = "Zaroor! Aap 11za team se yaha contact kar sakte hain: \n📞 +91 9726654060 | 📧 info@11za.com";
+      } else if (isAck) {
+        if (lower.match(/ok|okk|okey|okay|okayy|okkay|k|kk|thank|thanks|shukriya|accha|acha|thik|theek|hm|hmm|hmmm/)) {
+          casualResponse = "You're welcome 😊 Let me know if you need anything else.";
+        } else if (lower.match(/haan|haa|yes|yep|yup|ya|han|ji/)) {
+          casualResponse = "Theek hai 😊 Batao kaise help karu?";
+        } else {
+          casualResponse = "Theek hai 👍 Agar future me help chahiye ho to bata dena.";
         }
+      }
+
+      if (casualResponse) {
+        console.log("⚡ [AUTO RESPONDER] Short-circuiting with casual response");
+        const sendTextRes = await sendWhatsAppMessage(fromNumber, casualResponse, auth_token!, origin!);
+        if (sendTextRes.success) {
+          await supabase.from("whatsapp_messages").insert([{
+            message_id: `auto_${messageId}_${Date.now()}`,
+            from_number: toNumber,
+            to_number: fromNumber,
+            content_text: casualResponse,
+            event_type: "MtMessage",
+            is_in_24_window: true,
+          }]);
+          return { success: true, response: casualResponse, sent: true };
+        }
+      }
     }
 
     /* 6️⃣ LLM (FOR RAG QUERIES) */
     let completion;
     try {
-        completion = await groq.chat.completions.create({
-            model: "llama-3.1-8b-instant",
-            temperature: 0.1,
-            messages: [
-                { role: "system", content: systemPrompt + "\nCRITICAL RULES:\n1. ONLY USE ROMAN SCRIPT (ABC). Absolutely NO Devanagari/Hindi script (अ, क).\n2. If info is NOT in context, say EXACTLY: 'Lekin iske liye MERE paas abhi sahi jankari nahi hai. Par aap hamari team se contact kar sakte hain: \\n📞 +91 9726654060 | 📧 info@11za.com'. NOTHING ELSE." },
-                ...history.slice(-4),
-                { role: "user", content: `(MANDATORY: RESPOND ONLY IN ROMAN CHARACTERS/HINGLISH SCRIPT. NO DEVANAGARI.)\n\n${userText}` },
-                { role: "system", content: `MANDATORY: NO HINDI SCRIPT. Respond in ROMAN CHARACTERS ONLY.` }
-            ] as any,
-        });
+      completion = await groq.chat.completions.create({
+        model: "llama-3.1-8b-instant",
+        temperature: 0.1,
+        messages: [
+          { role: "system", content: systemPrompt + "\nCRITICAL RULES:\n1. ONLY USE ROMAN SCRIPT (ABC). Absolutely NO Devanagari/Hindi script (अ, क).\n2. If info is NOT in context, say EXACTLY: 'Lekin iske liye MERE paas abhi sahi jankari nahi hai. Par aap hamari team se contact kar sakte hain: \\n📞 +91 9726654060 | 📧 info@11za.com'. NOTHING ELSE." },
+          ...history.slice(-4),
+          { role: "user", content: `(MANDATORY: RESPOND ONLY IN ROMAN CHARACTERS/HINGLISH SCRIPT. NO DEVANAGARI.)\n\n${userText}` },
+          { role: "system", content: `MANDATORY: NO HINDI SCRIPT. Respond in ROMAN CHARACTERS ONLY.` }
+        ] as any,
+      });
     } catch (llmErr) {
-        console.error("🔥 [GROQ ERROR]:", llmErr);
-        await sendWhatsAppMessage(fromNumber, "Iske liye MERE paas abhi sahi jankari nahi hai. Please contact: info@11za.com", auth_token!, origin!);
-        return { success: false, error: "LLM failed" };
+      console.error("🔥 [GROQ ERROR]:", llmErr);
+      await sendWhatsAppMessage(fromNumber, "Iske liye MERE paas abhi sahi jankari nahi hai. Please contact: info@11za.com", auth_token!, origin!);
+      return { success: false, error: "LLM failed" };
     }
 
     let response = formatWhatsAppResponse(completion.choices[0]?.message?.content || "");
     if (!response) {
-        await sendWhatsAppMessage(fromNumber, "Maafi, response nahi ban paya. Please try again.", auth_token!, origin!);
-        return { success: false, error: "Empty AI response" };
+      await sendWhatsAppMessage(fromNumber, "Maafi, response nahi ban paya. Please try again.", auth_token!, origin!);
+      return { success: false, error: "Empty AI response" };
     }
 
     /* 6️⃣ TTS GENERATION (IF AUDIO INPUT) */
     let responseMediaUrl: string | undefined = undefined;
     if (isAudioInput) {
-        const hostedUrl = await generateTTS(response, targetLanguage === "hinglish" ? "hi" : "en");
-        if (hostedUrl) {
-            responseMediaUrl = hostedUrl;
-            console.log("🎙️ [AUTO RESPONDER] Audio hosted at:", responseMediaUrl);
-        }
+      const hostedUrl = await generateTTS(response, targetLanguage === "hinglish" ? "hi" : "en");
+      if (hostedUrl) {
+        responseMediaUrl = hostedUrl;
+        console.log("🎙️ [AUTO RESPONDER] Audio hosted at:", responseMediaUrl);
+      }
     }
 
     /* 7️⃣ SEND & SAVE */
@@ -238,21 +238,21 @@ ${contextText || "No context found. Provide support contact if needed."}
 
     // Send Audio Second (if applicable)
     if (isAudioInput && responseMediaUrl) {
-        console.log("📤 [AUTO RESPONDER] Sending voice note...");
-        await sendWhatsAppMedia(fromNumber, responseMediaUrl, "audio", auth_token!, origin!);
+      console.log("📤 [AUTO RESPONDER] Sending voice note...");
+      await sendWhatsAppMedia(fromNumber, responseMediaUrl, "audio", auth_token!, origin!);
     }
 
     // Save result to DB
     await supabase.from("whatsapp_messages").insert([{
-        message_id: `auto_${messageId}_${Date.now()}`,
-        channel: "whatsapp",
-        from_number: toNumber,
-        to_number: fromNumber,
-        received_at: new Date().toISOString(),
-        content_text: response,
-        sender_name: "AI Assistant",
-        event_type: "MtMessage",
-        is_in_24_window: true,
+      message_id: `auto_${messageId}_${Date.now()}`,
+      channel: "whatsapp",
+      from_number: toNumber,
+      to_number: fromNumber,
+      received_at: new Date().toISOString(),
+      content_text: response,
+      sender_name: "AI Assistant",
+      event_type: "MtMessage",
+      is_in_24_window: true,
     }]);
 
     return { success: true, response, sent: true, mediaUrl: responseMediaUrl };
